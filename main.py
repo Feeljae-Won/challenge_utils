@@ -1,15 +1,23 @@
+
 import tkinter as tk
 from tkinter import filedialog
 import os
+import sys
 import pdfplumber
 import pandas as pd
 from PIL import Image
 import pytesseract
 
-# Set the path to the tesseract executable
-# IMPORTANT: Change this path to your actual tesseract.exe location
-# Example for Windows:
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Set the path to the tesseract executable dynamically for PyInstaller bundled app
+if getattr(sys, 'frozen', False):
+    # Running in a PyInstaller bundle
+    application_path = sys._MEIPASS
+else:
+    # Running in a normal Python environment
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+# Assuming tesseract.exe is bundled in the root of the extracted directory
+pytesseract.pytesseract.tesseract_cmd = os.path.join(application_path, 'tesseract.exe')
 
 class PdfToExcelConverter(tk.Tk):
     def __init__(self):
