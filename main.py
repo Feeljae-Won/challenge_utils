@@ -50,7 +50,7 @@ class PdfToExcelConverter(tk.Tk):
                 with pdfplumber.open(self.file_path) as pdf:
                     for i, page in enumerate(pdf.pages):
                         # Extract blocks of text (Corrected typo: user_vertical_writing -> use_vertical_writing)
-                        blocks = page.extract_words(x_tolerance=3, y_tolerance=3, keep_blank_chars=False, extra_attrs=["fontname", "size"])
+                        blocks = page.extract_words()
                         for block in blocks:
                             all_blocks.append({
                                 'page': i + 1,
