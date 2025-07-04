@@ -1,6 +1,6 @@
-
 import tkinter as tk
 from tkinter import filedialog
+import os
 
 class PdfToExcelConverter(tk.Tk):
     def __init__(self):
@@ -31,7 +31,17 @@ class PdfToExcelConverter(tk.Tk):
                 import pdfplumber
                 import pandas as pd
 
-                save_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
+                # Generate default save name from the selected PDF file
+                base_name = os.path.basename(self.file_path)
+                file_name_without_ext = os.path.splitext(base_name)[0]
+                default_save_name = f"{file_name_without_ext}_엑셀 변환"
+
+                save_path = filedialog.asksaveasfilename(
+                    initialfile=default_save_name,
+                    defaultextension=".xlsx",
+                    filetypes=[("Excel files", "*.xlsx")]
+                )
+
                 if not save_path:
                     self.status_label.config(text="Save cancelled.")
                     return
@@ -39,7 +49,7 @@ class PdfToExcelConverter(tk.Tk):
                 all_blocks = []
                 with pdfplumber.open(self.file_path) as pdf:
                     for i, page in enumerate(pdf.pages):
-                        # Extract blocks of text
+                        # Extract blocks of text (Corrected typo: user_vertical_writing -> use_vertical_writing)
                         blocks = page.extract_words(x_tolerance=3, y_tolerance=3, keep_blank_chars=False, use_vertical_writing=False, extra_attrs=["fontname", "size"])
                         for block in blocks:
                             all_blocks.append({
