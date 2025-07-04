@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import filedialog
 import os
@@ -6,6 +5,11 @@ import pdfplumber
 import pandas as pd
 from PIL import Image
 import pytesseract
+
+# Set the path to the tesseract executable
+# IMPORTANT: Change this path to your actual tesseract.exe location
+# Example for Windows:
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 class PdfToExcelConverter(tk.Tk):
     def __init__(self):
@@ -56,9 +60,6 @@ class PdfToExcelConverter(tk.Tk):
 
                         if not blocks: # If no text blocks found, try OCR
                             self.status_label.config(text=f"Page {i+1}: No text blocks found. Attempting OCR...")
-                            # Render page as image and perform OCR
-                            # Note: This requires Ghostscript to be installed for pdfplumber to render images
-                            # and Tesseract-OCR to be installed for pytesseract.
                             try:
                                 # Convert PDF page to image using pdfplumber's .to_image()
                                 # This requires Ghostscript to be installed and in PATH.
@@ -75,8 +76,11 @@ class PdfToExcelConverter(tk.Tk):
                                     })
                                 else:
                                     self.status_label.config(text=f"Page {i+1}: OCR found no text.")
+                            except pytesseract.TesseractNotFoundError:
+                                self.status_label.config(text="Error: Tesseract-OCR is not installed or not in PATH. Please install it from https://tesseract-ocr.github.io/tessdoc/Installation.html and ensure it's in your system PATH.")
+                                return
                             except Exception as ocr_e:
-                                self.status_label.config(text=f"Page {i+1}: OCR Error: {ocr_e}")
+                                self.status_label.config(text=f"Page {i+1}: OCR Error: {ocr_e}. Ensure Ghostscript is installed and in PATH for image conversion.")
                                 continue # Skip to next page if OCR fails
                         else:
                             for block in blocks:
