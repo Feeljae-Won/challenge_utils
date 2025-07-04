@@ -1,6 +1,11 @@
+
 import tkinter as tk
 from tkinter import filedialog
 import os
+import pdfplumber
+import pandas as pd
+from PIL import Image
+import pytesseract
 
 class PdfToExcelConverter(tk.Tk):
     def __init__(self):
@@ -28,9 +33,6 @@ class PdfToExcelConverter(tk.Tk):
     def convert_to_excel(self):
         if self.file_path:
             try:
-                import pdfplumber
-                import pandas as pd
-
                 # Generate default save name from the selected PDF file
                 base_name = os.path.basename(self.file_path)
                 file_name_without_ext = os.path.splitext(base_name)[0]
@@ -49,22 +51,48 @@ class PdfToExcelConverter(tk.Tk):
                 all_blocks = []
                 with pdfplumber.open(self.file_path) as pdf:
                     for i, page in enumerate(pdf.pages):
-                        # Extract blocks of text (Corrected typo: user_vertical_writing -> use_vertical_writing)
+                        # Try to extract text blocks using pdfplumber first
                         blocks = page.extract_words()
-                        for block in blocks:
-                            all_blocks.append({
-                                'page': i + 1,
-                                'text': block['text'],
-                                'x0': block['x0'],
-                                'top': block['top'],
-                                'x1': block['x1'],
-                                'bottom': block['bottom'],
-                                'fontname': block.get('fontname', ''),
-                                'size': block.get('size', 0)
-                            })
+
+                        if not blocks: # If no text blocks found, try OCR
+                            self.status_label.config(text=f"Page {i+1}: No text blocks found. Attempting OCR...")
+                            # Render page as image and perform OCR
+                            # Note: This requires Ghostscript to be installed for pdfplumber to render images
+                            # and Tesseract-OCR to be installed for pytesseract.
+                            try:
+                                # Convert PDF page to image using pdfplumber's .to_image()
+                                # This requires Ghostscript to be installed and in PATH.
+                                img = page.to_image(resolution=300).original
+                                ocr_text = pytesseract.image_to_string(img, lang='kor+eng') # 'kor' for Korean, 'eng' for English
+                                if ocr_text.strip():
+                                    # For simplicity, treat the whole OCR'd text as one block
+                                    all_blocks.append({
+                                        'page': i + 1,
+                                        'text': ocr_text.strip(),
+                                        'x0': 0, 'top': 0, 'x1': 0, 'bottom': 0, # Placeholder coordinates
+                                        'fontname': 'OCR',
+                                        'size': 0
+                                    })
+                                else:
+                                    self.status_label.config(text=f"Page {i+1}: OCR found no text.")
+                            except Exception as ocr_e:
+                                self.status_label.config(text=f"Page {i+1}: OCR Error: {ocr_e}")
+                                continue # Skip to next page if OCR fails
+                        else:
+                            for block in blocks:
+                                all_blocks.append({
+                                    'page': i + 1,
+                                    'text': block['text'],
+                                    'x0': block['x0'],
+                                    'top': block['top'],
+                                    'x1': block['x1'],
+                                    'bottom': block['bottom'],
+                                    'fontname': block.get('fontname', ''),
+                                    'size': block.get('size', 0)
+                                })
 
                 if not all_blocks:
-                    self.status_label.config(text="No text blocks found in the PDF.")
+                    self.status_label.config(text="No text blocks found in the PDF, even with OCR.")
                     return
 
                 df = pd.DataFrame(all_blocks)
