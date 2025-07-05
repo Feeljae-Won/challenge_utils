@@ -1,5 +1,1 @@
-pdfplumber==0.7.0
-pandas
 openpyxl
-pyinstaller
-pytesseract
