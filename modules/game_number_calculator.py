@@ -8,7 +8,9 @@ import datetime
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
-        self.title("경기번호 계산기")
+        self.version = "1.0.0"
+        self.build_date = datetime.datetime.now().strftime("%Y%m%d")
+        self.title(f"경기번호 계산기 v{self.version} ({self.build_date})")
         self.geometry("1200x700")
         self.last_imported_filename = ""
         self.last_imported_filename = ""
@@ -462,7 +464,7 @@ class GameNumberCalculator(tk.Toplevel):
 
     def export_results_to_excel(self):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        default_filename = f"{self.last_imported_filename}_{current_time}.xlsx" if self.last_imported_filename else f"경기번호계산_{current_time}.xlsx"
+        default_filename = f"경기번호계산_{current_time}.xlsx"
 
         file_path = filedialog.asksaveasfilename(defaultextension=".xlsx",
                                                    initialfile=default_filename,

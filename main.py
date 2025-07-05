@@ -1,10 +1,47 @@
 import tkinter as tk
 from tkinter import font
+import datetime
+
+class PasswordWindow(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("비밀번호 입력")
+        self.geometry("300x150")
+        self.resizable(False, False)
+
+        self.password_label = tk.Label(self, text="비밀번호를 입력하세요:")
+        self.password_label.pack(pady=10)
+
+        self.password_entry = tk.Entry(self, show="*")
+        self.password_entry.pack(pady=5)
+        self.password_entry.bind("<Return>", self.check_password) # Enter 키 바인딩
+
+        self.login_button = tk.Button(self, text="확인", command=self.check_password)
+        self.login_button.pack(pady=10)
+
+        # 창을 화면 중앙에 배치
+        self.update_idletasks()
+        x = self.winfo_screenwidth() // 2 - self.winfo_width() // 2
+        y = self.winfo_screenheight() // 2 - self.winfo_height() // 2
+        self.geometry(f"300x150+{x}+{y}")
+
+    def check_password(self, event=None):
+        entered_password = self.password_entry.get()
+        if entered_password == "015394":
+            self.destroy() # 비밀번호 창 닫기
+            app = MainApp() # 메인 앱 실행
+            app.mainloop()
+        else:
+            tk.messagebox.showerror("오류", "잘못된 비밀번호입니다.")
+            self.password_entry.delete(0, tk.END) # 입력 필드 초기화
+
 
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("필재의 유틸리티 모음")
+        self.version = "1.0.0"
+        self.build_date = datetime.datetime.now().strftime("%Y%m%d")
+        self.title(f"필재의 유틸리티 모음 v{self.version} ({self.build_date})")
         self.geometry("400x500")
 
         # 메인 타이틀
@@ -49,5 +86,5 @@ class MainApp(tk.Tk):
         self.deiconify() # 메인 창 다시 보이기
 
 if __name__ == "__main__":
-    app = MainApp()
-    app.mainloop()
+    password_app = PasswordWindow()
+    password_app.mainloop()
