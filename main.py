@@ -39,7 +39,7 @@ class PasswordWindow(tk.Tk):
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.version = "1.0.0"
+        self.version = "1.0.1"
         self.build_date = datetime.datetime.now().strftime("%Y%m%d")
         self.title(f"필재의 유틸리티 모음 v{self.version} ({self.build_date})")
         self.geometry("400x500")

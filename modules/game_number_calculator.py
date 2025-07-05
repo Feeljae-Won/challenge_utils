@@ -8,7 +8,7 @@ import datetime
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
-        self.version = "1.0.0"
+        self.version = "1.0.1"
         self.build_date = datetime.datetime.now().strftime("%Y%m%d")
         self.title(f"경기번호 계산기 v{self.version} ({self.build_date})")
         self.geometry("1200x700")
@@ -306,8 +306,14 @@ class GameNumberCalculator(tk.Toplevel):
                     elif participants >= 22:
                         # Case 3: Participants >= 22
                         # Preliminary (예선)
-                        num_prelim_groups = (participants + 10) // 11 # ceil(participants / 11)
-                        if num_prelim_groups % 2 != 0: # Ensure even number of groups
+                        num_prelim_groups = 2 # Start with 2 groups
+                        while participants / num_prelim_groups > 11.5 and num_prelim_groups % 2 == 0:
+                            num_prelim_groups += 2
+
+                        # Ensure num_prelim_groups is at least 2 and even
+                        if num_prelim_groups < 2:
+                            num_prelim_groups = 2
+                        if num_prelim_groups % 2 != 0:
                             num_prelim_groups += 1
 
                         base_prelim_group_size = participants // num_prelim_groups
@@ -332,8 +338,14 @@ class GameNumberCalculator(tk.Toplevel):
 
                         # 본선 (Main Round)
                         if total_main_round_participants > 0:
-                            num_main_groups = (total_main_round_participants + 10) // 11 # ceil(total_main_round_participants / 11)
-                            if num_main_groups % 2 != 0: # Ensure even number of groups
+                            num_main_groups = 2 # Start with 2 groups
+                            while total_main_round_participants / num_main_groups > 11.5 and num_main_groups % 2 == 0:
+                                num_main_groups += 2
+
+                            # Ensure num_main_groups is at least 2 and even
+                            if num_main_groups < 2:
+                                num_main_groups = 2
+                            if num_main_groups % 2 != 0:
                                 num_main_groups += 1
 
                             base_main_group_size = total_main_round_participants // num_main_groups
