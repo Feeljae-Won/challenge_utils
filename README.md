@@ -1,6 +1,6 @@
-# 필재의 유틸리티 모음 (feelsUtil)
+# 와이프의 업무 시간 단축 및 효율을 위해서 만든 유틸 모음 (feelsUtil)
 
-필재의 유틸리티 모음은 다양한 일상 및 특정 작업을 돕기 위해 개발된 GUI 기반 유틸리티 애플리케이션입니다. 현재 경기 번호 계산기 기능을 제공하며, 사용자 친화적인 인터페이스를 통해 복잡한 계산을 손쉽게 처리할 수 있습니다.
+불철주야 고생하시는 내무부장관님께 바치는 도구이옵니다.
 
 ## 현재 버전
 
@@ -29,14 +29,8 @@ v1.0.0
 
 ## 다운로드
 
-최신 실행 파일 (`feelsUtil.exe`)은 프로젝트의 [GitHub Releases](https://github.com/Feeljae-Won/challenge_utils/releases) 페이지에서 다운로드할 수 있습니다.
+최신 실행 파일 (`feelsUtil.exe`)은 프로젝트의 [GitHub Releases](https://github.com/Feeljae-Won/challenge_utils/releases) 페이지에서 다운로드가 가능합니다.
 
 **로컬에서 직접 빌드한 경우:**
 빌드된 실행 파일은 `dist` 디렉토리 내에 `feelsUtil.exe`로 존재합니다.
-예시 경로: `D:\Feeljae\workspace\python\challenge_utils\dist\feelsUtil.exe`
-
-## 사용 방법
-
-1.  `feelsUtil.exe` 파일을 실행합니다.
-2.  비밀번호 입력 창이 나타나면 `015394`를 입력합니다.
-3.  메인 애플리케이션에서 원하는 유틸리티를 선택하여 사용합니다.
+예시 경로: `\challenge_utils\dist\feelsUtil.exe`
