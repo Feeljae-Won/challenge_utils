@@ -4,6 +4,7 @@ import shutil
 import openpyxl
 import os
 import datetime
+import sys
 
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
@@ -241,7 +242,12 @@ class GameNumberCalculator(tk.Toplevel):
             self.add_row_with_data(row)
 
     def download_template(self):
-        source_path = "templates/경기번호_계산기_양식.xlsx"
+        if getattr(sys, 'frozen', False):
+            # PyInstaller로 번들된 경우
+            source_path = os.path.join(sys._MEIPASS, "templates", "경기번호_계산기_양식.xlsx")
+        else:
+            # 개발 환경인 경우
+            source_path = "templates/경기번호_계산기_양식.xlsx"
         if not os.path.exists(source_path):
             tk.messagebox.showerror("오류", "양식 파일이 존재하지 않습니다.")
             return
