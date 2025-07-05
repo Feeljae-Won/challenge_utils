@@ -15,7 +15,7 @@ class GameNumberCalculator(tk.Toplevel):
 
         # 설명 레이블
         description_font = font.Font(family="Helvetica", size=12)
-        description_label = tk.Label(self, text="각 행에 종목, 부, 체급, 참가인원을 입력하고 '+' 버튼을 눌러 행을 추가하세요.", font=description_font, pady=10)
+        description_label = tk.Label(self, text="컷오프 계산시 종목에 '자유품새'를 입력하세요.", font=description_font, pady=10)
         description_label.pack()
 
         # 메인 프레임 (좌우 분할)
@@ -280,44 +280,124 @@ class GameNumberCalculator(tk.Toplevel):
                 division = entries["부"].get() or ""
                 weight_class = entries["체급"].get() or ""
 
-                total_slots = 1
-                while total_slots < participants:
-                    total_slots *= 2
-                
-                byes = total_slots - participants
-                first_round_matches = participants - byes
+                if event == "자유품새":
+                    if participants <= 11:
+                        # Case 1: Participants <= 11
+                        self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "결선", f"1~{participants}", participants))
+                        row_index += 1
+                    elif 12 <= participants <= 21:
+                        # Case 2: 12 <= Participants <= 21
+                        # Divide into 2 groups (as even as possible)
+                        group1_size = participants // 2
+                        group2_size = participants - group1_size
 
-                # 예선전 (첫 라운드)
-                if first_round_matches > 0:
-                    round_name = f"{total_slots}강"
-                    num_matches = first_round_matches // 2
-                    start_game = game_number_counter
-                    end_game = game_number_counter + num_matches - 1
-                    game_numbers_display = f"{start_game}~{end_game}" if num_matches > 0 else "-"
-                    self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, num_matches))
-                    game_number_counter = end_game + 1
-                    row_index += 1
+                        # 본선-1조
+                        self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "본선-1조", f"1~{group1_size}", group1_size))
+                        row_index += 1
+                        # 본선-2조
+                        self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "본선-2조", f"1~{group2_size}", group2_size))
+                        row_index += 1
 
-                # 본선 (다음 라운드부터 결승까지)
-                current_participants = (first_round_matches // 2) + byes
-                while current_participants > 1:
-                    round_matches = current_participants // 2
-                    round_name = f"{current_participants}강" if current_participants > 2 else "결승"
-                    if current_participants == 4:
-                        round_name = "준결승"
-                    elif current_participants == 8:
-                        round_name = "8강"
-                    
-                    start_game = game_number_counter
-                    end_game = game_number_counter + round_matches - 1
-                    game_numbers_display = f"{start_game}~{end_game}" if round_matches > 0 else "-"
-                    self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, round_matches))
-                    game_number_counter = end_game + 1
-                    current_participants //= 2
-                    row_index += 1
+                        # 결선
+                        self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "결선", "1~8", 8))
+                        row_index += 1
+                    elif participants >= 22:
+                        # Case 3: Participants >= 22
+                        # Preliminary (예선)
+                        num_prelim_groups = (participants + 10) // 11 # ceil(participants / 11)
+                        if num_prelim_groups % 2 != 0: # Ensure even number of groups
+                            num_prelim_groups += 1
+
+                        base_prelim_group_size = participants // num_prelim_groups
+                        remainder_prelim = participants % num_prelim_groups
+
+                        prelim_group_sizes = []
+                        for g in range(num_prelim_groups):
+                            size = base_prelim_group_size
+                            if g < remainder_prelim:
+                                size += 1
+                            prelim_group_sizes.append(size)
+
+                        # 예선 결과 출력
+                        for g_idx, size in enumerate(prelim_group_sizes):
+                            self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, f"예선-{g_idx+1}조", f"1~{size}", size))
+                            row_index += 1
+
+                        # 본선 진출 인원 계산 (각 예선 조에서 50% 진출)
+                        total_main_round_participants = 0
+                        for size in prelim_group_sizes:
+                            total_main_round_participants += (size + 1) // 2 # ceil(size / 2) for 50% advancement
+
+                        # 본선 (Main Round)
+                        if total_main_round_participants > 0:
+                            num_main_groups = (total_main_round_participants + 10) // 11 # ceil(total_main_round_participants / 11)
+                            if num_main_groups % 2 != 0: # Ensure even number of groups
+                                num_main_groups += 1
+
+                            base_main_group_size = total_main_round_participants // num_main_groups
+                            remainder_main = total_main_round_participants % num_main_groups
+
+                            main_group_sizes = []
+                            for g in range(num_main_groups):
+                                size = base_main_group_size
+                                if g < remainder_main:
+                                    size += 1
+                                main_group_sizes.append(size)
+
+                            # 본선 결과 출력
+                            for g_idx, size in enumerate(main_group_sizes):
+                                self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, f"본선-{g_idx+1}조", f"1~{size}", size))
+                                row_index += 1
+
+                            # 결선 (Final Round) - based on number of main round groups
+                            # 예선과 본선을 거쳤을 경우 결선은 무조건 1~8
+                            self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "결선", "1~8", 8))
+                            row_index += 1
+
+                else:
+                    # Existing logic for other events
+                    game_number_counter, row_index = self._calculate_standard_matches(participants, event, division, weight_class, game_number_counter, row_index)
 
             except ValueError:
                 continue
+
+    def _calculate_standard_matches(self, participants, event, division, weight_class, game_number_counter, row_index):
+        total_slots = 1
+        while total_slots < participants:
+            total_slots *= 2
+
+        byes = total_slots - participants
+        first_round_matches = participants - byes
+
+        # 예선전 (첫 라운드)
+        if first_round_matches > 0:
+            round_name = f"{total_slots}"
+            num_matches = first_round_matches // 2
+            start_game = game_number_counter
+            end_game = game_number_counter + num_matches - 1
+            game_numbers_display = f"{start_game}~{end_game}" if num_matches > 0 else "-"
+            self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, num_matches))
+            game_number_counter = end_game + 1
+            row_index += 1
+
+        # 본선 (다음 라운드부터 결승까지)
+        current_participants = (first_round_matches // 2) + byes
+        while current_participants > 1:
+            round_matches = current_participants // 2
+            round_name = f"{current_participants}" if current_participants > 2 else "2"
+            if current_participants == 4:
+                round_name = "4"
+            elif current_participants == 8:
+                round_name = "8"
+
+            start_game = game_number_counter
+            end_game = game_number_counter + round_matches - 1
+            game_numbers_display = f"{start_game}~{end_game}" if round_matches > 0 else "-"
+            self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, round_matches))
+            game_number_counter = end_game + 1
+            current_participants //= 2
+            row_index += 1
+        return game_number_counter, row_index
 
     def _sort_column(self, col):
         # 현재 열의 정렬 상태 업데이트
@@ -375,9 +455,9 @@ class GameNumberCalculator(tk.Toplevel):
         if "강" in round_str:
             return int(round_str.replace("강", ""))
         elif round_str == "결승":
-            return 1 # 결승을 가장 작은 값으로
+            return 2
         elif round_str == "준결승":
-            return 2 # 준결승을 결승 다음으로 작은 값으로
+            return 4
         return 0 # 알 수 없는 값은 0으로 처리
 
     def export_results_to_excel(self):
