@@ -14,6 +14,7 @@ class PasswordWindow(tk.Tk):
 
         self.password_entry = tk.Entry(self, show="*")
         self.password_entry.pack(pady=5)
+        self.password_entry.focus_set() # 이 줄을 추가합니다.
         self.password_entry.bind("<Return>", self.check_password) # Enter 키 바인딩
 
         self.login_button = tk.Button(self, text="확인", command=self.check_password)
