@@ -58,6 +58,7 @@ class MainApp(tk.Tk):
         # 모듈 버튼 생성
         modules = {
             "경기번호 계산기": self.open_game_number_calculator,
+            "품새 소청 계산기": self.open_poomsae_sochung_calculator,
             "준비중": lambda: self.on_module_button_click("PDF 변환")
         }
         for module_name, command in modules.items():
@@ -86,6 +87,12 @@ class MainApp(tk.Tk):
     def on_calculator_close(self, window):
         window.destroy()
         self.deiconify() # 메인 창 다시 보이기
+
+    def open_poomsae_sochung_calculator(self):
+        from modules.poomsae_sochung_calculator import PoomsaeSochungCalculator
+        self.withdraw() # 메인 창 숨기기
+        calculator_window = PoomsaeSochungCalculator(self)
+        calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))
 
 if __name__ == "__main__":
     password_app = PasswordWindow()
