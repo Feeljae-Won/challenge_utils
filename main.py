@@ -1,4 +1,5 @@
 import tkinter as tk
+from version import __version__ as app_version
 from tkinter import font
 import datetime
 
@@ -14,6 +15,7 @@ class PasswordWindow(tk.Tk):
 
         self.password_entry = tk.Entry(self, show="*")
         self.password_entry.pack(pady=5)
+        self.password_entry.focus_set() # 이 줄을 추가합니다.
         self.password_entry.bind("<Return>", self.check_password) # Enter 키 바인딩
 
         self.login_button = tk.Button(self, text="확인", command=self.check_password)
@@ -39,7 +41,7 @@ class PasswordWindow(tk.Tk):
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.version = "1.0.1"
+        self.version = app_version # 변경
         self.build_date = datetime.datetime.now().strftime("%Y%m%d")
         self.title(f"필재의 유틸리티 모음 v{self.version} ({self.build_date})")
         self.geometry("400x500")

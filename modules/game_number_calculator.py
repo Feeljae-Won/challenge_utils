@@ -5,11 +5,12 @@ import openpyxl
 import os
 import datetime
 import sys
+from version import __version__ as app_version
 
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
-        self.version = "1.0.1"
+        self.version = app_version
         self.build_date = datetime.datetime.now().strftime("%Y%m%d")
         self.title(f"경기번호 계산기 v{self.version} ({self.build_date})")
         self.geometry("1200x700")
@@ -460,6 +461,7 @@ class GameNumberCalculator(tk.Toplevel):
                 data.sort(key=lambda x: self._get_round_value(x[0][col_index]), reverse=reverse)
             else:
                 data.sort(key=lambda x: x[0][col_index], reverse=reverse)
+            #data.sort(key=lambda x: x[0][col_index], reverse=reverse)
 
         # Treeview 업데이트
         for item_id in self.result_tree.get_children():
@@ -472,13 +474,14 @@ class GameNumberCalculator(tk.Toplevel):
             self.result_tree.insert('', 'end', values=updated_values)
 
     def _get_round_value(self, round_str):
-        if "강" in round_str:
-            return int(round_str.replace("강", ""))
-        elif round_str == "결승":
-            return 2
-        elif round_str == "준결승":
-            return 4
-        return 0 # 알 수 없는 값은 0으로 처리
+        try:
+            # 숫자로 변환 가능한 경우 (예: "512", "256")
+            # 숫자는 그대로 반환하고, 우선순위를 높게 줍니다 (0)
+            return (0, int(round_str))
+        except ValueError:
+            # 숫자로 변환 불가능한 경우 (예: "본선-1조", "결선")
+            # 문자열로 처리하고, 우선순위를 낮게 줍니다 (1)
+            return (1, round_str)
 
     def export_results_to_excel(self):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
