@@ -6,13 +6,13 @@ import os
 import datetime
 import sys
 from version import __version__ as app_version
+from version import __build_date__ as app_date
 
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.version = app_version
-        self.build_date = datetime.datetime.now().strftime("%Y%m%d")
-        self.title(f"경기번호 계산기 v{self.version} ({self.build_date})")
+        self.title(f"경기번호 계산기 v{app_version} (빌드: {app_date})")
         self.geometry("1200x700")
         self.last_imported_filename = ""
         self.last_imported_filename = ""

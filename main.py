@@ -2,6 +2,8 @@ import tkinter as tk
 from version import __version__ as app_version
 from tkinter import font
 import datetime
+from version import __version__ as app_version
+from version import __build_date__ as app_date
 
 class PasswordWindow(tk.Tk):
     def __init__(self):
@@ -42,8 +44,7 @@ class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.version = app_version # 변경
-        self.build_date = datetime.datetime.now().strftime("%Y%m%d")
-        self.title(f"필재의 유틸리티 모음 v{self.version} ({self.build_date})")
+        self.title(f"필재의 유틸리티 모음 v{app_version} (빌드: {app_date}")
         self.geometry("400x500")
 
         # 메인 타이틀
