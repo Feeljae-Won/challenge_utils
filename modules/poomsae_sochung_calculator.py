@@ -2,14 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox, font
 import math
 from decimal import Decimal, getcontext, ROUND_HALF_UP
-
-__version__ = "1.0.0"
-__build_date__ = "2025년 7월 6일"
+from version import __version__ as app_version
+from version import __build_date__ as app_date
 
 class PoomsaeSochungCalculator(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
-        self.title(f"품새 소청 계산기 v{__version__} (빌드: {__build_date__})")
+        self.title(f"품새 소청 계산기 v{app_version} (빌드: {app_date})")
         self.geometry("1400x850") # 초기 창 크기 조정
         self.master = master
 
