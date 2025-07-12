@@ -273,6 +273,7 @@ class GameNumberCalculator(tk.Toplevel):
 
         game_number_counter = 1
         row_index = 1 # 결과 테이블의 행 번호
+        prev_event, prev_division, prev_weight_class = None, None, None
 
         for i, row_data in enumerate(self.rows):
             entries = row_data["entries"]
@@ -296,8 +297,8 @@ class GameNumberCalculator(tk.Toplevel):
                         row_index += 1
                     elif 12 <= participants <= 21:
                         # Case 2: 12 <= Participants <= 21
-                        # Divide into 2 groups (as even as possible)
-                        group1_size = participants // 2
+                        # Divide into 2 groups, with the first group being larger if uneven
+                        group1_size = (participants + 1) // 2
                         group2_size = participants - group1_size
 
                         # 본선-1조
@@ -374,10 +375,20 @@ class GameNumberCalculator(tk.Toplevel):
                             # 예선과 본선을 거쳤을 경우 결선은 무조건 1~8
                             self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, "결선", "1~8", 8))
                             row_index += 1
+                    
+                    prev_event, prev_division, prev_weight_class = None, None, None
 
                 else:
                     # Existing logic for other events
+                    current_category = (event, division, weight_class)
+                    previous_category = (prev_event, prev_division, prev_weight_class)
+
+                    if current_category != previous_category:
+                        game_number_counter = 1
+
                     game_number_counter, row_index = self._calculate_standard_matches(participants, event, division, weight_class, game_number_counter, row_index)
+                    
+                    prev_event, prev_division, prev_weight_class = event, division, weight_class
 
             except ValueError:
                 continue
@@ -474,14 +485,34 @@ class GameNumberCalculator(tk.Toplevel):
             self.result_tree.insert('', 'end', values=updated_values)
 
     def _get_round_value(self, round_str):
+        # Custom sort for "자유품새" rounds
+        if '결선' in round_str:
+            # Highest priority for ascending sort
+            return (0, 0)
+        elif '본선' in round_str:
+            try:
+                group_num = int(round_str.split('-')[1].replace('조', ''))
+                # Second priority
+                return (1, group_num)
+            except (IndexError, ValueError):
+                return (1, 0) # Fallback for "본선" without a group number
+        elif '예선' in round_str:
+            try:
+                group_num = int(round_str.split('-')[1].replace('조', ''))
+                # Third priority
+                return (2, group_num)
+            except (IndexError, ValueError):
+                return (2, 0) # Fallback for "예선" without a group number
+
+        # Sort logic for standard tournament rounds (e.g., "8", "4")
         try:
-            # 숫자로 변환 가능한 경우 (예: "512", "256")
-            # 숫자는 그대로 반환하고, 우선순위를 높게 줍니다 (0)
-            return (0, int(round_str))
+            # For ascending sort, smaller numbers come first.
+            # For descending, larger numbers come first.
+            # This is the natural integer order.
+            return (3, int(round_str))
         except ValueError:
-            # 숫자로 변환 불가능한 경우 (예: "본선-1조", "결선")
-            # 문자열로 처리하고, 우선순위를 낮게 줍니다 (1)
-            return (1, round_str)
+            # Fallback for any other string that doesn't fit the patterns above
+            return (4, round_str)
 
     def export_results_to_excel(self):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
