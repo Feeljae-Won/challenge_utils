@@ -12,6 +12,13 @@ class GameTimeCalculator(tk.Toplevel):
         self.master = master
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        # 스타일 설정
+        style = ttk.Style(self)
+        style.configure("TNotebook.Tab", padding=[12, 5], font=('Helvetica', 10))
+        style.map("TNotebook.Tab", 
+                  background=[("selected", "lightgreen")],
+                  foreground=[("selected", "black")])
+
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 

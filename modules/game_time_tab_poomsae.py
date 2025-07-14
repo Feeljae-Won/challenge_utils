@@ -58,11 +58,11 @@ class PoomsaeTab(ttk.Frame):
         self.header_check_var = tk.IntVar()
         header_check = tk.Checkbutton(header_frame, variable=self.header_check_var, command=self.toggle_all_checks)
         header_check.pack(side="left", padx=2, anchor='w')
-        tk.Label(header_frame, text="종목", width=15, anchor='w').pack(side="left", padx=2)
-        tk.Label(header_frame, text="참가부", width=15, anchor='w').pack(side="left", padx=2)
+        tk.Label(header_frame, text="종목", width=18, anchor='w').pack(side="left", padx=2)
+        tk.Label(header_frame, text="참가부", width=18, anchor='w').pack(side="left", padx=2)
         tk.Label(header_frame, text="세부부별", width=15, anchor='w').pack(side="left", padx=2)
-        tk.Label(header_frame, text="성별", width=8, anchor='w').pack(side="left", padx=2)
-        tk.Label(header_frame, text="인원수", width=10, anchor='w').pack(side="left", padx=2)
+        tk.Label(header_frame, text="성별", width=10, anchor='w').pack(side="left", padx=2)
+        tk.Label(header_frame, text="인원수", width=15, anchor='w').pack(side="left", padx=2)
 
         canvas = tk.Canvas(input_grid_frame)
         scrollbar = tk.Scrollbar(input_grid_frame, orient="vertical", command=canvas.yview)
@@ -424,7 +424,7 @@ class PoomsaeTab(ttk.Frame):
         save_path = filedialog.asksaveasfilename(
             parent=self,
             title="엑셀 양식 저장",
-            initialfile="경기시간_계산_양식.xlsx",
+            initialfile="품새_경기시간_계산_양식.xlsx",
             defaultextension=".xlsx",
             filetypes=[("Excel files", "*.xlsx"), ("All files", "*.* ")]
         )
