@@ -2,4 +2,4 @@ openpyxl
 pyinstaller
 pdfplumber
 pandas
-pytesseract
+pytesseractopenpyxl

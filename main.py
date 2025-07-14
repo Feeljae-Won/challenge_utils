@@ -63,6 +63,7 @@ class MainApp(tk.Tk):
         # 모듈 버튼 생성
         modules = {
             "경기번호 계산기": self.open_game_number_calculator,
+            "경기 시간 계산기": self.open_game_time_calculator,
             "품새 소청 계산기": self.open_poomsae_sochung_calculator,
             "준비중": lambda: self.on_module_button_click("PDF 변환")
         }
@@ -111,6 +112,12 @@ class MainApp(tk.Tk):
         from modules.game_number_calculator import GameNumberCalculator
         self.withdraw() # 메인 창 숨기기
         calculator_window = GameNumberCalculator(self)
+        calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))
+
+    def open_game_time_calculator(self):
+        from modules.game_time_calculator import GameTimeCalculator
+        self.withdraw() # 메인 창 숨기기
+        calculator_window = GameTimeCalculator(self)
         calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))
 
     def on_calculator_close(self, window):
