@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, font
 import json
 import shutil
 import os
@@ -89,6 +89,14 @@ class KyorugiTab(ttk.Frame):
         self.result_text = tk.Text(results_labelframe, height=15, wrap="word", state="disabled", relief="flat")
         self.result_text.pack(expand=True, fill="both", padx=5, pady=5)
 
+        # Footer
+        footer_frame = tk.Frame(right_frame)
+        footer_frame.pack(side=tk.BOTTOM, pady=5)
+
+        footer_font = font.Font(family="Helvetica", size=9)
+        footer_label = tk.Label(footer_frame, text="Copyright (c) FEELJAE-WON. All rights reserved.", font=footer_font, fg="gray")
+        footer_label.pack(side=tk.LEFT, padx=5)
+
     def calculate_time(self):
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
@@ -140,13 +148,54 @@ class KyorugiTab(ttk.Frame):
             h, m = divmod(m, 60)
             return f"{int(h)}시간 {int(m)}분 {int(s)}초"
 
-        result_str = "===== 코트 적용 소요시간 ====\n"
+        result_str = "==================== 코트 적용 소요시간 ====================\n\n"
         result_str += f"총 예상 소요시간: {format_time(total_duration_seconds)}\n"
         result_str += "\n[겨루기] - " + str(court_count) + " 코트 기준\n"
-        result_str += f"  총 소요시간: {format_time(kyorugi_duration_per_court)}\n"
-        result_str += "===========\n"
+        result_str += f"  총 소요시간: {format_time(kyorugi_duration_per_court)}\n\n"
+        
+        result_str += "============================================================\n\n"
         result_str += f"시작 시간: {start_time.strftime('%H:%M')}\n"
-        result_str += f"예상 종료 시간: {end_time.strftime('%H:%M')}\n"
+        result_str += f"예상 종료 시간: {end_time.strftime('%H:%M')}\n\n"
+        result_str += "============================================================\n"
+
+        # 참가부별 코트 반영 소요시간 및 게임 수
+        division_data = {}
+        for row in rows_to_process:
+            division = row['division'].get()
+            weight_class = row['weight_class'].get()
+            headcount = int(row['count'].get() or 0)
+
+            if not division or headcount == 0:
+                continue
+
+            time_per_match = int(settings.get(division, 450))
+            num_matches = max(0, headcount - 1)
+            row_total_seconds = num_matches * time_per_match
+
+            if division not in division_data:
+                division_data[division] = {"total_seconds": 0, "total_games": 0}
+            division_data[division]["total_seconds"] += row_total_seconds
+            division_data[division]["total_games"] += num_matches
+
+        if division_data:
+            result_str += "\n========== 참가부별 코트 반영 소요시간 및 게임 수 ==========\n\n"
+            for division, data in division_data.items():
+                adjusted_seconds = data["total_seconds"] / court_count if court_count > 0 else 0
+                result_str += f"  {division}: {format_time(adjusted_seconds)} (총 {data["total_games"]} 게임)\n"
+
+        applied_settings_summary = {}
+        for row in rows_to_process:
+            division = row['division'].get()
+            if division and division not in applied_settings_summary:
+                time_per_match = int(settings.get(division, 450))
+                applied_settings_summary[division] = time_per_match
+
+        if applied_settings_summary:
+            result_str += "\n============== 적용된 참가부별 경기 시간 설정 ==============\n\n"
+            for division, time_in_seconds in applied_settings_summary.items():
+                minutes = time_in_seconds / 60
+                result_str += f"  {division}: {time_in_seconds}초 ({minutes:.1f}분)\n"
+            result_str += "\n============================================================\n"
 
         self.result_text.config(state="normal")
         self.result_text.delete("1.0", tk.END)

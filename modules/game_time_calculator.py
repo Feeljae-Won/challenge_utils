@@ -2,11 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 from modules.game_time_tab_poomsae import PoomsaeTab
 from modules.game_time_tab_kyorugi import KyorugiTab
+from version import __version__ as app_version
+from version import __build_date__ as app_date
 
 class GameTimeCalculator(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
-        self.title("경기 시간 계산기")
+        self.title(f"경기 시간 계산기 v{app_version} (빌드: {app_date})")
         self.geometry("1400x750")
 
         self.master = master

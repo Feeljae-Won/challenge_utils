@@ -110,6 +110,14 @@ class PoomsaeTab(ttk.Frame):
         self.result_text = tk.Text(results_labelframe, height=15, wrap="word", state="disabled", relief="flat")
         self.result_text.pack(expand=True, fill="both", padx=5, pady=5)
 
+        # Footer
+        footer_frame = tk.Frame(right_frame)
+        footer_frame.pack(side=tk.BOTTOM, pady=5)
+
+        footer_font = font.Font(family="Helvetica", size=9)
+        footer_label = tk.Label(footer_frame, text="Copyright (c) FEELJAE-WON. All rights reserved.", font=footer_font, fg="gray")
+        footer_label.pack(side=tk.LEFT, padx=5)
+
     def calculate_time(self):
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
@@ -231,33 +239,35 @@ class PoomsaeTab(ttk.Frame):
             return f"{format_time(effective_seconds)} (총 {int(games_count)} 게임)"
 
         result_str = "==================== 코트 적용 소요시간 ====================\n"
-        result_str += f"총 예상 소요시간: {format_time(total_duration_seconds)}\n"
-        result_str += "\n[공인품새] - " + str(gongin_courts) + " 코트 기준\n"
+        result_str += f"\n총 예상 소요시간: {format_time(total_duration_seconds)}\n"
+        result_str += f"\n시작 시간: {start_time.strftime('%H:%M')}\n"
+        result_str += f"예상 종료 시간: {end_time.strftime('%H:%M')}\n"
+        result_str += "\n============================================================\n\n"
+        
+        result_str += "[공인품새] - " + str(gongin_courts) + " 코트 기준\n\n"
         result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['개인전']['time'], sub_totals['공인품새']['개인전']['games'], gongin_courts)}\n"
         result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['복식전']['time'], sub_totals['공인품새']['복식전']['games'], gongin_courts)}\n"
-        result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['단체전']['time'], sub_totals['공인품새']['단체전']['games'], gongin_courts)}\n"
+        result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['단체전']['time'], sub_totals['공인품새']['단체전']['games'], gongin_courts)}\n\n"
         result_str += f"  공인품새 총 소요시간: {format_time(gongin_duration_per_court)}\n"
 
         freestyle_simultaneous_status = "적용" if self.freestyle_simultaneous_var.get() == 1 else "미적용"
-        result_str += f"\n[자유품새] - {jayu_courts} 코트 기준 (동시진행 {freestyle_simultaneous_status})\n"
+        result_str += f"\n[자유품새] - {jayu_courts} 코트 기준 (동시진행 {freestyle_simultaneous_status})\n\n"
         result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['개인전']['time'], sub_totals['자유품새']['개인전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
         result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['복식전']['time'], sub_totals['자유품새']['복식전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
-        result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['단체전']['time'], sub_totals['자유품새']['단체전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
+        result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['단체전']['time'], sub_totals['자유품새']['단체전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n\n"
         result_str += f"  자유품새 총 소요시간: {format_time(jayu_duration_per_court)}\n"
 
-        result_str += "========================================================\n"
-        result_str += f"시작 시간: {start_time.strftime('%H:%M')}\n"
-        result_str += f"예상 종료 시간: {end_time.strftime('%H:%M')}\n"
+        result_str += "\n============================================================\n"
         
-        result_str += "\n ** 설명 **\n"
-        result_str += "   - 공인품새\n"
+        result_str += "\n ** 설명 **\n\n"
+        result_str += "   - 공인품새\n\n"
         result_str += "       * 개인전의 경우 각 행마다 (인원수 - 1) * 소요시간으로 계산\n"
         result_str += "       * 복/식단체의 경우 각 행마다 {(인원수 / 2) - 1} * 소요시간으로 계산\n\n"
-        result_str += "   - 자유품새\n"
+        result_str += "   - 자유품새\n\n"
         result_str += "       * 개인전의 경우 각 행마다 (인원수 - 1) * 소요시간으로 계산\n"
         result_str += "       * 복/식단체의 경우 각 행마다 {(인원수 / 2 또는 5) - 1} * 소요시간으로 계산\n"
         result_str += "       * 22명(팀) 이상 참가할 경우 [{인원수 + (인원수 * 0.5)} + 8] * 소요시간 으로 \n"
-        result_str += "         예선 - 본선 -결선을 계산\n"
+        result_str += "         예선 - 본선 - 결선을 계산\n"
         result_str += "       * 12명(팀) 이상 21명(팀) 이하 참가할 경우 (인원수 + 8) * 소요시간으로 \n"
         result_str += "         본선 - 결선을 계산\n"
         result_str += "       * 11명(팀) 이하일 경우 결선으로 계산\n"
