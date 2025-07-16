@@ -6,8 +6,9 @@ import os
 import openpyxl
 from datetime import datetime, timedelta
 
-SETTINGS_FILE = "poomsae_settings.json"
-TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '..', 'templates', '품새_경기시간_계산기_양식.xlsx')
+from ..common.constants import POOMSAE_SETTINGS_FILE as SETTINGS_FILE
+from ..common.constants import POOMSAE_TEMPLATE_PATH as TEMPLATE_PATH
+from ..utils.file_operations import download_template_file
 
 DEFAULT_SETTINGS = {
     "individual": {
@@ -431,18 +432,7 @@ class PoomsaeTab(ttk.Frame):
             messagebox.showerror("가져오기 실패", f"엑셀 파일을 읽는 중 오류가 발생했습니다:\n{e}", parent=self)
 
     def download_excel_template(self):
-        save_path = filedialog.asksaveasfilename(
-            parent=self,
-            title="엑셀 양식 저장",
-            initialfile="품새_경기시간_계산_양식.xlsx",
-            defaultextension=".xlsx",
-            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.* ")]
-        )
-        if save_path:
-            try:
-                shutil.copyfile(TEMPLATE_PATH, save_path)
-            except Exception as e:
-                messagebox.showerror("저장 실패", f"양식을 저장하는 중 오류가 발생했습니다:\n{e}", parent=self)
+        download_template_file(TEMPLATE_PATH, "품새_경기시간_계산_양식.xlsx", [("Excel files", "*.xlsx"), ("All files", "*.* ")])
 
     def create_kyorugi_tab(self):
         settings_button = tk.Button(self.kyorugi_frame, text="⚙️ 옵션", command=self.open_kyorugi_settings)

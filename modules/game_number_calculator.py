@@ -4,9 +4,10 @@ import shutil
 import openpyxl
 import os
 import datetime
-import sys
-from version import __version__ as app_version
-from version import __build_date__ as app_date
+from ..common.version import __version__ as app_version
+from ..common.version import __build_date__ as app_date
+from ..common.constants import GAME_NUMBER_TEMPLATE_PATH
+from ..utils.file_operations import download_template_file
 
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
@@ -243,22 +244,7 @@ class GameNumberCalculator(tk.Toplevel):
             self.add_row_with_data(row)
 
     def download_template(self):
-        if getattr(sys, 'frozen', False):
-            # PyInstaller로 번들된 경우
-            source_path = os.path.join(sys._MEIPASS, "templates", "경기번호_계산기_양식.xlsx")
-        else:
-            # 개발 환경인 경우
-            source_path = "templates/경기번호_계산기_양식.xlsx"
-        if not os.path.exists(source_path):
-            tk.messagebox.showerror("오류", "양식 파일이 존재하지 않습니다.")
-            return
-
-        save_path = filedialog.asksaveasfilename(defaultextension=".xlsx",
-                                                   initialfile="경기번호_계산기_양식.xlsx",
-                                                   filetypes=[("Excel files", "*.xlsx")])
-        if save_path:
-            shutil.copy(source_path, save_path)
-            tk.messagebox.showinfo("성공", f"양식이 {save_path}에 저장되었습니다.")
+        download_template_file(GAME_NUMBER_TEMPLATE_PATH, "경기번호_계산기_양식.xlsx", [("Excel files", "*.xlsx")])
 
     def calculate_matches(self):
         # 기존 결과 삭제
