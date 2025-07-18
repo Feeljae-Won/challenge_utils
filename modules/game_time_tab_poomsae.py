@@ -6,9 +6,9 @@ import os
 import openpyxl
 from datetime import datetime, timedelta
 
-from ..common.constants import POOMSAE_SETTINGS_FILE as SETTINGS_FILE
-from ..common.constants import POOMSAE_TEMPLATE_PATH as TEMPLATE_PATH
-from ..utils.file_operations import download_template_file
+from common.constants import POOMSAE_SETTINGS_FILE as SETTINGS_FILE
+from common.constants import POOMSAE_TEMPLATE_PATH as TEMPLATE_PATH
+from utils.file_operations import download_template_file
 
 DEFAULT_SETTINGS = {
     "individual": {
@@ -27,8 +27,8 @@ class PoomsaeTab(ttk.Frame):
         super().__init__(notebook)
         self.parent_app = parent_app # Reference to the main GameTimeCalculator app
         self.input_rows = []
+        self.rows_container = None # Initialize rows_container
         self.create_widgets()
-        self.populate_default_rows()
 
     def create_widgets(self):
         main_paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -42,14 +42,44 @@ class PoomsaeTab(ttk.Frame):
         control_frame = tk.Frame(left_frame)
         control_frame.pack(fill='x', padx=10, pady=(10,0))
 
-        add_button = tk.Button(control_frame, text="+ 개발", command=self.add_input_row)
+        add_button = tk.Button(control_frame, text="+ 행추가", command=self.add_input_row)
         add_button.pack(side="left", padx=(0, 5))
-        import_button = tk.Button(control_frame, text="엑셀로 가져오기", command=self.import_from_excel)
+        import_button = tk.Button(control_frame, bg="#4CAF50", fg="white", text="엑셀로 가져오기", command=self.import_from_excel)
         import_button.pack(side="left", padx=5)
         download_button = tk.Button(control_frame, text="엑셀 양식 다운로드", command=self.download_excel_template)
         download_button.pack(side="left", padx=5)
         settings_button = tk.Button(control_frame, text="⚙️ 옵션", command=self.open_poomsae_settings)
         settings_button.pack(side="right")
+
+        filter_frame = tk.Frame(left_frame)
+        filter_frame.pack(fill='x', padx=10, pady=(10,10))
+
+        self.filter_comboboxes = {}
+
+        event_filter_values = ["", "개인전", "복식전", "단체전", "개인전(자유품새)", "복식전(자유품새)", "단체전(자유품새)"]
+        self.event_filter_combo = ttk.Combobox(filter_frame, values=event_filter_values, width=15, state="readonly")
+        self.event_filter_combo.set("종목 필터")
+        self.event_filter_combo.pack(side="left", padx=2)
+        self.event_filter_combo.bind("<<ComboboxSelected>>", self._apply_filters)
+        self.filter_comboboxes["event"] = self.event_filter_combo
+
+        division_filter_values = ["", "초등부", "중등부", "고등부", "대학부", "일반부"]
+        self.division_filter_combo = ttk.Combobox(filter_frame, values=division_filter_values, width=15, state="readonly")
+        self.division_filter_combo.set("참가부 필터")
+        self.division_filter_combo.pack(side="left", padx=2)
+        self.division_filter_combo.bind("<<ComboboxSelected>>", self._apply_filters)
+        self.filter_comboboxes["division"] = self.division_filter_combo
+
+        gender_filter_values = ["", "남자", "여자", "혼성"]
+        self.gender_filter_combo = ttk.Combobox(filter_frame, values=gender_filter_values, width=8, state="readonly")
+        self.gender_filter_combo.set("성별 필터")
+        self.gender_filter_combo.pack(side="left", padx=2)
+        self.gender_filter_combo.bind("<<ComboboxSelected>>", self._apply_filters)
+        self.filter_comboboxes["gender"] = self.gender_filter_combo
+
+        # Add a clear filter button
+        clear_filter_button = tk.Button(filter_frame, text="필터 초기화", command=self._clear_filters)
+        clear_filter_button.pack(side="left", padx=5)
 
         input_grid_frame = tk.Frame(left_frame)
         input_grid_frame.pack(expand=True, fill="both", padx=10, pady=10)
@@ -65,14 +95,17 @@ class PoomsaeTab(ttk.Frame):
         tk.Label(header_frame, text="성별", width=10, anchor='w').pack(side="left", padx=2)
         tk.Label(header_frame, text="인원수", width=15, anchor='w').pack(side="left", padx=2)
 
+        
         canvas = tk.Canvas(input_grid_frame)
         scrollbar = tk.Scrollbar(input_grid_frame, orient="vertical", command=canvas.yview)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
         self.rows_container = tk.Frame(canvas)
         self.rows_container.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.rows_container, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.populate_default_rows()
 
         results_labelframe = tk.LabelFrame(right_frame, text="결과")
         results_labelframe.pack(expand=True, fill="both", padx=10, pady=10)
@@ -104,12 +137,24 @@ class PoomsaeTab(ttk.Frame):
         freestyle_simultaneous_check = tk.Checkbutton(court_frame, text="자유품새 동시진행", variable=self.freestyle_simultaneous_var)
         freestyle_simultaneous_check.pack(side="left", padx=5)
 
+        freestyle_calc_options_frame = ttk.LabelFrame(results_labelframe, text="자유품새 계산")
+        freestyle_calc_options_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        self.prelim_var = tk.IntVar(value=1) # Default to checked
+        self.main_var = tk.IntVar(value=1) # Default to checked
+        self.final_var = tk.IntVar(value=1) # Default to checked
+
+        ttk.Checkbutton(freestyle_calc_options_frame, text="예선", variable=self.prelim_var).pack(side="left", padx=5, pady=5)
+        ttk.Checkbutton(freestyle_calc_options_frame, text="본선", variable=self.main_var).pack(side="left", padx=5, pady=5)
+        ttk.Checkbutton(freestyle_calc_options_frame, text="결선", variable=self.final_var).pack(side="left", padx=5, pady=5)
+
         calc_button = tk.Button(results_labelframe, text="계산하기", bg="red", fg="white", font=("Helvetica", 10, "bold"), command=self.calculate_time)
         calc_button.pack(fill='x', padx=5, pady=10)
         self.bind('<Return>', lambda event=None: calc_button.invoke())
 
         self.result_text = tk.Text(results_labelframe, height=15, wrap="word", state="disabled", relief="flat")
         self.result_text.pack(expand=True, fill="both", padx=5, pady=5)
+        self.result_text.tag_configure("bold", font=("Helvetica", 10, "bold"))
 
         # Footer
         footer_frame = tk.Frame(right_frame)
@@ -181,10 +226,75 @@ class PoomsaeTab(ttk.Frame):
                 else: # 자유품새
                     if actual_division_type == "개인전":
                         if original_headcount > 22:
-                            calculated_headcount = original_headcount + (original_headcount * 0.5) + 8
+                            participants = original_headcount
+                            num_prelim_groups = 2
+                            while participants / num_prelim_groups > 11.5 and num_prelim_groups % 2 == 0:
+                                num_prelim_groups += 2
+
+                            if num_prelim_groups < 2:
+                                num_prelim_groups = 2
+                            if num_prelim_groups % 2 != 0:
+                                num_prelim_groups += 1
+
+                            base_prelim_group_size = participants // num_prelim_groups
+                            remainder_prelim = participants % num_prelim_groups
+
+                            prelim_group_sizes = []
+                            for g in range(num_prelim_groups):
+                                size = base_prelim_group_size
+                                if g < remainder_prelim:
+                                    size += 1
+                                prelim_group_sizes.append(size)
+
+                            # Calculate advancement to main round based on first group size
+                            first_group_size = prelim_group_sizes[0] if prelim_group_sizes else 0
+                            advancement_per_group = (first_group_size + 1) // 2 # Round up
+                            total_main_round_participants_for_next_stage = advancement_per_group * num_prelim_groups
+
+                            # Now, calculate main round groups based on total_main_round_participants_for_next_stage
+                            num_main_groups = 2
+                            while total_main_round_participants_for_next_stage / num_main_groups > 11.5 and num_main_groups % 2 == 0:
+                                num_main_groups += 2
+
+                            if num_main_groups < 2:
+                                num_main_groups = 2
+                            if num_main_groups % 2 != 0:
+                                num_main_groups += 1
+
+                            base_main_group_size = total_main_round_participants_for_next_stage // num_main_groups
+                            remainder_main = total_main_round_participants_for_next_stage % num_main_groups
+
+                            main_group_sizes = []
+                            for g in range(num_main_groups):
+                                size = base_main_group_size
+                                if g < remainder_main:
+                                    size += 1
+                                main_group_sizes.append(size)
+
+                            calculated_headcount = 0
+                            if self.prelim_var.get():
+                                calculated_headcount += sum(prelim_group_sizes)
+                            if self.main_var.get():
+                                calculated_headcount += sum(main_group_sizes)
+                            if self.final_var.get():
+                                calculated_headcount += 8 # 결선은 항상 8명
+
                         elif 12 <= original_headcount <= 21:
-                            calculated_headcount = original_headcount + 8
+                            calculated_headcount = 0
+                            if self.main_var.get():
+                                calculated_headcount += original_headcount
+                            if self.final_var.get():
+                                calculated_headcount += 8 # 결선은 항상 8명
                         # else: original_headcount <= 11, calculated_headcount remains original_headcount
+                        # If only final is checked for <= 11 participants, it should be 8
+                        if original_headcount <= 11 and self.final_var.get() and not self.prelim_var.get() and not self.main_var.get():
+                            calculated_headcount = 8
+                        elif original_headcount <= 11 and not self.final_var.get() and not self.prelim_var.get() and not self.main_var.get():
+                            calculated_headcount = 0 # If nothing is checked, and participants <= 11, then 0
+                        elif original_headcount <= 11 and self.final_var.get() and (self.prelim_var.get() or self.main_var.get()):
+                            calculated_headcount = original_headcount + 8 # If final is checked and other rounds are also checked, add 8 for final
+                        elif original_headcount <= 11 and (self.prelim_var.get() or self.main_var.get()):
+                            calculated_headcount = original_headcount # If only prelim/main are checked, use original headcount
                     elif actual_division_type == "복식전":
                         calculated_headcount = original_headcount / 2
                     elif actual_division_type == "단체전":
@@ -242,21 +352,30 @@ class PoomsaeTab(ttk.Frame):
         result_str = "==================== 코트 적용 소요시간 ====================\n"
         result_str += f"\n총 예상 소요시간: {format_time(total_duration_seconds)}\n"
         result_str += f"\n시작 시간: {start_time.strftime('%H:%M')}\n"
-        result_str += f"예상 종료 시간: {end_time.strftime('%H:%M')}\n"
+        end_time_str = end_time.strftime('%H:%M')
+        if end_time.day != start_time.day:
+            end_time_str += " (+1)"
+        result_str += f"\n예상 종료 시간: {end_time_str}\n"
         result_str += "\n============================================================\n\n"
         
         result_str += "[공인품새] - " + str(gongin_courts) + " 코트 기준\n\n"
         result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['개인전']['time'], sub_totals['공인품새']['개인전']['games'], gongin_courts)}\n"
         result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['복식전']['time'], sub_totals['공인품새']['복식전']['games'], gongin_courts)}\n"
         result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['단체전']['time'], sub_totals['공인품새']['단체전']['games'], gongin_courts)}\n\n"
-        result_str += f"  공인품새 총 소요시간: {format_time(gongin_duration_per_court)}\n"
+        total_gongin_games = sub_totals['공인품새']['개인전']['games'] + \
+                             sub_totals['공인품새']['복식전']['games'] + \
+                             sub_totals['공인품새']['단체전']['games']
+        result_str += f"  공인품새 총 소요시간: {format_time(gongin_duration_per_court)} (총 {int(total_gongin_games)} 게임)\n"
 
         freestyle_simultaneous_status = "적용" if self.freestyle_simultaneous_var.get() == 1 else "미적용"
+        total_jayu_games = sub_totals['자유품새']['개인전']['games'] + \
+                           sub_totals['자유품새']['복식전']['games'] + \
+                           sub_totals['자유품새']['단체전']['games']
         result_str += f"\n[자유품새] - {jayu_courts} 코트 기준 (동시진행 {freestyle_simultaneous_status})\n\n"
         result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['개인전']['time'], sub_totals['자유품새']['개인전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
         result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['복식전']['time'], sub_totals['자유품새']['복식전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
         result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['단체전']['time'], sub_totals['자유품새']['단체전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n\n"
-        result_str += f"  자유품새 총 소요시간: {format_time(jayu_duration_per_court)}\n"
+        result_str += f"  자유품새 총 소요시간: {format_time(jayu_duration_per_court)} (총 {int(total_jayu_games)} 게임)\n"
 
         result_str += "\n============================================================\n"
         
@@ -277,6 +396,26 @@ class PoomsaeTab(ttk.Frame):
         self.result_text.config(state="normal")
         self.result_text.delete("1.0", tk.END)
         self.result_text.insert(tk.END, result_str)
+
+        # Apply bold tags
+        self.result_text.tag_add("bold", "3.0", "3.end") # 총 예상 소요시간
+        self.result_text.tag_add("bold", "5.0", "5.end") # 시작 시간
+        self.result_text.tag_add("bold", "7.0", "7.end") # 예상 종료 시간
+
+        # Find and bold "공인품새 총 소요시간" and "자유품새 총 소요시간"
+        # These lines might shift, so find them dynamically
+        gongin_total_time_start = self.result_text.search("공인품새 총 소요시간", "1.0", tk.END)
+        if gongin_total_time_start:
+            gongin_total_time_end = self.result_text.search("\n", gongin_total_time_start, tk.END)
+            if gongin_total_time_end:
+                self.result_text.tag_add("bold", gongin_total_time_start, gongin_total_time_end)
+
+        jayu_total_time_start = self.result_text.search("자유품새 총 소요시간", "1.0", tk.END)
+        if jayu_total_time_start:
+            jayu_total_time_end = self.result_text.search("\n", jayu_total_time_start, tk.END)
+            if jayu_total_time_end:
+                self.result_text.tag_add("bold", jayu_total_time_start, jayu_total_time_end)
+
         self.result_text.config(state="disabled")
 
     def set_current_time(self):
@@ -323,13 +462,38 @@ class PoomsaeTab(ttk.Frame):
         for data in all_rows_data:
             self.add_input_row(data)
 
-        if not self.input_rows:
+        # Ensure there are at least 10 rows
+        while len(self.input_rows) < 10:
             self.add_input_row()
+        self._clear_filters() # Apply filters after populating rows
+
+    def _apply_filters(self, event=None):
+        selected_event = self.event_filter_combo.get()
+        selected_division = self.division_filter_combo.get()
+        selected_gender = self.gender_filter_combo.get()
+
+        for row_widgets in self.input_rows:
+            event_match = (selected_event == "" or selected_event == "종목 필터" or row_widgets['event'].get() == selected_event)
+            division_match = (selected_division == "" or selected_division == "참가부 필터" or row_widgets['division'].get() == selected_division)
+            gender_match = (selected_gender == "" or selected_gender == "성별 필터" or row_widgets['gender'].get() == selected_gender)
+
+            if event_match and division_match and gender_match:
+                row_widgets['frame'].pack(fill='x', pady=2, anchor='w')
+            else:
+                row_widgets['frame'].pack_forget()
+
+    def _clear_filters(self):
+        self.event_filter_combo.set("종목 필터")
+        self.division_filter_combo.set("참가부 필터")
+        self.gender_filter_combo.set("성별 필터")
+        self._apply_filters()
 
     def toggle_all_checks(self):
         is_checked = self.header_check_var.get()
         for row_widgets in self.input_rows:
-            row_widgets['check_var'].set(is_checked)
+            # Only toggle if the row is currently visible (packed)
+            if row_widgets['frame'].winfo_ismapped():
+                row_widgets['check_var'].set(is_checked)
 
     def add_input_row(self, data=None):
         row_frame = tk.Frame(self.rows_container)
@@ -339,20 +503,26 @@ class PoomsaeTab(ttk.Frame):
         check = tk.Checkbutton(row_frame, variable=check_var)
         check.pack(side="left", padx=2)
 
-        event_combo = ttk.Combobox(row_frame, values=["개인전", "복식전", "단체전", "개인전(자유품새)", "복식전(자유품새)", "단체전(자유품새)"], width=15)
-        event_combo.pack(side="left", padx=2)
+        event_var = tk.StringVar()
+        event_entry = tk.Entry(row_frame, width=18, textvariable=event_var)
+        event_entry.pack(side="left", padx=2)
+        event_var.trace_add("write", lambda name, index, mode, entry=event_entry: self._update_event_color(entry))
 
-        division_combo = ttk.Combobox(row_frame, values=["초등부", "중등부", "고등부", "대학부", "일반부"], width=15)
-        division_combo.pack(side="left", padx=2)
+        division_var = tk.StringVar()
+        division_entry = tk.Entry(row_frame, width=18, textvariable=division_var)
+        division_entry.pack(side="left", padx=2)
+        division_var.trace_add("write", lambda name, index, mode, entry=division_entry: self._update_division_color(entry))
 
         category_entry = tk.Entry(row_frame, width=15)
         category_entry.pack(side="left", padx=2)
 
-        gender_combo = ttk.Combobox(row_frame, values=["남자", "여자", "혼성"], width=8)
-        gender_combo.pack(side="left", padx=2)
+        gender_entry = tk.Entry(row_frame, width=10)
+        gender_entry.pack(side="left", padx=2)
 
-        count_entry = tk.Entry(row_frame, width=10)
+        count_var = tk.StringVar()
+        count_entry = tk.Entry(row_frame, width=10, textvariable=count_var)
         count_entry.pack(side="left", padx=2)
+        count_var.trace_add("write", lambda name, index, mode, event_entry=event_entry, count_entry=count_entry: self._update_headcount_color(event_entry, count_entry))
         
         # Bind Tab key to move focus to the next game count entry
         count_entry.bind("<Tab>", self.focus_next_game_count)
@@ -363,17 +533,72 @@ class PoomsaeTab(ttk.Frame):
         delete_button.pack(side="left", padx=2)
 
         row_widgets = {
-            'frame': row_frame, 'check_var': check_var, 'event': event_combo, 
-            'division': division_combo, 'class': category_entry, 'gender': gender_combo, 'count': count_entry
+            'frame': row_frame, 'check_var': check_var, 'event': event_entry, 
+            'division': division_entry, 'class': category_entry, 'gender': gender_entry, 'count': count_entry
         }
         self.input_rows.append(row_widgets)
 
         if data:
-            event_combo.set(data.get("종목", ""))
-            division_combo.set(data.get("참가부", ""))
+            event_entry.insert(0, data.get("종목", ""))
+            division_entry.insert(0, data.get("참가부", ""))
             category_entry.insert(0, data.get("세부부별", ""))
-            gender_combo.set(data.get("성별", ""))
+            gender_entry.insert(0, data.get("성별", ""))
             count_entry.insert(0, str(data.get("인원수", "")))
+        self._apply_filters()
+
+    def _update_headcount_color(self, event_entry, count_entry):
+        event_text = event_entry.get()
+        count_text = count_entry.get()
+
+        try:
+            original_headcount = int(count_text)
+        except ValueError:
+            count_entry.config(bg="white", fg="black")
+            return
+
+        calculated_headcount = original_headcount
+
+        if event_text == "개인전":
+            pass # calculated_headcount remains original_headcount
+        elif event_text == "복식전" or event_text == "복식전(자유품새)":
+            calculated_headcount = original_headcount / 2
+        elif event_text == "단체전":
+            calculated_headcount = original_headcount / 3
+        elif event_text == "단체전(자유품새)":
+            calculated_headcount = original_headcount / 5
+
+        if calculated_headcount < 4 and original_headcount > 0:
+            count_entry.config(bg="red", fg="white")
+        else:
+            count_entry.config(bg="white", fg="black")
+
+    def _update_event_color(self, entry):
+        event_text = entry.get()
+        color_map = {
+            "개인전": "#E0FFFF", # Light Cyan
+            "복식전": "#F08080", # Light Coral
+            "단체전": "#FAFAD2", # Light Goldenrod Yellow
+            "개인전(자유품새)": "#98FB98", # Pale Green
+            "복식전(자유품새)": "#FFA07A", # Light Salmon
+            "단체전(자유품새)": "#B0C4DE"  # Light Steel Blue
+        }
+        entry.config(bg=color_map.get(event_text, "white"))
+        # Also update headcount color when event changes
+        for row_widgets in self.input_rows:
+            if row_widgets['event'] == entry:
+                self._update_headcount_color(row_widgets['event'], row_widgets['count'])
+                break
+
+    def _update_division_color(self, entry):
+        division_text = entry.get()
+        color_map = {
+            "초등부": "#ADD8E6", # Light Blue
+            "중등부": "#90EE90", # Light Green
+            "고등부": "#FFFFE0", # Light Yellow
+            "대학부": "#FFDAB9", # Peach Puff
+            "일반부": "#E6E6FA"  # Lavender
+        }
+        entry.config(bg=color_map.get(division_text, "white"))
 
     def focus_next_game_count(self, event):
         current_entry = event.widget
@@ -433,12 +658,6 @@ class PoomsaeTab(ttk.Frame):
 
     def download_excel_template(self):
         download_template_file(TEMPLATE_PATH, "품새_경기시간_계산_양식.xlsx", [("Excel files", "*.xlsx"), ("All files", "*.* ")])
-
-    def create_kyorugi_tab(self):
-        settings_button = tk.Button(self.kyorugi_frame, text="⚙️ 옵션", command=self.open_kyorugi_settings)
-        settings_button.pack(anchor="ne", padx=10, pady=10)
-        label = tk.Label(self.kyorugi_frame, text="겨루기 경기 시간 계산기 내용")
-        label.pack(pady=20)
 
     def open_poomsae_settings(self):
         settings_window = tk.Toplevel(self)
@@ -521,7 +740,6 @@ class PoomsaeTab(ttk.Frame):
         try:
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(settings_to_save, f, ensure_ascii=False, indent=4)
-            self.populate_default_rows()
             return True
         except Exception as e:
             messagebox.showerror("저장 실패", f"설정을 저장하는 중 오류가 발생했습니다:\n{e}", parent=self)
@@ -549,15 +767,6 @@ class PoomsaeTab(ttk.Frame):
             self.entries[f'team_{cat}'].set(settings_to_load.get('team', {}).get(cat, ''))
         for cat in DEFAULT_SETTINGS['freestyle']:
             self.entries[f'freestyle_{cat}'].set(settings_to_load.get('freestyle', {}).get(cat, ''))
-
-    def open_kyorugi_settings(self):
-        settings_window = tk.Toplevel(self)
-        settings_window.title("겨루기 옵션")
-        settings_window.geometry("300x200")
-        settings_window.transient(self)
-        settings_window.grab_set()
-        label = tk.Label(settings_window, text="겨루기 경기 시간 계산기 내용")
-        label.pack(pady=20, padx=20)
 
     def on_close(self):
         self.master.deiconify()
