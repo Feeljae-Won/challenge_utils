@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import font
 import datetime
-from version import __version__ as app_version
-from version import __build_date__ as app_date
+from common.version import __version__ as app_version
+from common.version import __build_date__ as app_date
+from modules.game_number_calculator import GameNumberCalculator
+from modules.game_time_calculator import GameTimeCalculator
+from modules.poomsae_sochung_calculator import PoomsaeSochungCalculator
 
 class PasswordWindow(tk.Tk):
     def __init__(self):
@@ -109,13 +112,13 @@ class MainApp(tk.Tk):
         text_area.config(state="disabled")
 
     def open_game_number_calculator(self):
-        from modules.game_number_calculator import GameNumberCalculator
+
         self.withdraw() # 메인 창 숨기기
         calculator_window = GameNumberCalculator(self)
         calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))
 
     def open_game_time_calculator(self):
-        from modules.game_time_calculator import GameTimeCalculator
+
         self.withdraw() # 메인 창 숨기기
         calculator_window = GameTimeCalculator(self)
         calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))
@@ -125,7 +128,7 @@ class MainApp(tk.Tk):
         self.deiconify() # 메인 창 다시 보이기
 
     def open_poomsae_sochung_calculator(self):
-        from modules.poomsae_sochung_calculator import PoomsaeSochungCalculator
+
         self.withdraw() # 메인 창 숨기기
         calculator_window = PoomsaeSochungCalculator(self)
         calculator_window.protocol("WM_DELETE_WINDOW", lambda: self.on_calculator_close(calculator_window))

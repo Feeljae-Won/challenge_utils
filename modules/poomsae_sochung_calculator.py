@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox, font
 import math
 from decimal import Decimal, getcontext, ROUND_HALF_UP
-from version import __version__ as app_version
-from version import __build_date__ as app_date
+from common.version import __version__ as app_version
+from common.version import __build_date__ as app_date
 
 class PoomsaeSochungCalculator(tk.Toplevel):
     def __init__(self, master):

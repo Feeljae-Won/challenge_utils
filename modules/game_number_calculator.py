@@ -4,9 +4,10 @@ import shutil
 import openpyxl
 import os
 import datetime
-import sys
-from version import __version__ as app_version
-from version import __build_date__ as app_date
+from common.version import __version__ as app_version
+from common.version import __build_date__ as app_date
+from common.constants import GAME_NUMBER_TEMPLATE_PATH
+from utils.file_operations import download_template_file
 
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
@@ -35,8 +36,7 @@ class GameNumberCalculator(tk.Toplevel):
         top_controls_frame.pack(fill=tk.X, pady=5)
 
         # '+' 버튼 (왼쪽 정렬)
-        plus_button_font = font.Font(family="Helvetica", size=13, weight="bold")
-        add_row_button = tk.Button(top_controls_frame, text="+", bg="#030ac1", fg="white", command=self.add_row, font=plus_button_font)
+        add_row_button = tk.Button(top_controls_frame, text="+ 행추가", command=self.add_row)
         add_row_button.pack(side=tk.LEFT, padx=5)
 
         # 초기화 버튼 (빨간색 바탕, 흰 글씨)
@@ -243,22 +243,7 @@ class GameNumberCalculator(tk.Toplevel):
             self.add_row_with_data(row)
 
     def download_template(self):
-        if getattr(sys, 'frozen', False):
-            # PyInstaller로 번들된 경우
-            source_path = os.path.join(sys._MEIPASS, "templates", "경기번호_계산기_양식.xlsx")
-        else:
-            # 개발 환경인 경우
-            source_path = "templates/경기번호_계산기_양식.xlsx"
-        if not os.path.exists(source_path):
-            tk.messagebox.showerror("오류", "양식 파일이 존재하지 않습니다.")
-            return
-
-        save_path = filedialog.asksaveasfilename(defaultextension=".xlsx",
-                                                   initialfile="경기번호_계산기_양식.xlsx",
-                                                   filetypes=[("Excel files", "*.xlsx")])
-        if save_path:
-            shutil.copy(source_path, save_path)
-            tk.messagebox.showinfo("성공", f"양식이 {save_path}에 저장되었습니다.")
+        download_template_file(GAME_NUMBER_TEMPLATE_PATH, "경기번호_계산기_양식.xlsx", [("Excel files", "*.xlsx")])
 
     def calculate_matches(self):
         # 기존 결과 삭제
@@ -339,10 +324,10 @@ class GameNumberCalculator(tk.Toplevel):
                             self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, f"예선-{g_idx+1}조", f"1~{size}", size))
                             row_index += 1
 
-                        # 본선 진출 인원 계산 (각 예선 조에서 50% 진출)
-                        total_main_round_participants = 0
-                        for size in prelim_group_sizes:
-                            total_main_round_participants += (size + 1) // 2 # ceil(size / 2) for 50% advancement
+                        # 본선 진출 인원 계산 (1조 인원의 절반(반올림)이 해당 체급에 모든 조에 그 인원이 진출)
+                        first_group_size = prelim_group_sizes[0] if prelim_group_sizes else 0
+                        advancement_per_group = (first_group_size + 1) // 2 # Round up for advancement
+                        total_main_round_participants = advancement_per_group * num_prelim_groups
 
                         # 본선 (Main Round)
                         if total_main_round_participants > 0:
