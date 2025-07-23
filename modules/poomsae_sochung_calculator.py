@@ -76,12 +76,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
 
         score_system = self.score_system_var.get()
 
-        if score_system == "우리스포츠":
-            # 우리스포츠는 버림
-            processed_number = self._truncate_float_value(number, decimals)
-        else: # 태권소프트
-            # 태권소프트는 반올림
-            processed_number = self._round_half_up_value(number, decimals)
+        processed_number = self._round_half_up_value(number, decimals)
 
         return f"{processed_number:.{decimals}f}"
 
@@ -335,7 +330,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         score_system = self.score_system_var.get()
         if score_system == "우리스포츠":
             self.calculate_button.config(text="우리스포츠 방식 점수 계산")
-            self.description_label.config(text="* 우리스포츠 방식 점수 계산\n   - 우리스포츠는 항목평점 및 평점을 계산할 때 소수점 3자리 까지 표현되며 소수점 4자리에서 내림 합니다. \n * 동점 처리 \n   - 1) 표현력 > 2) 정확성 > 3) 총점")
+            self.description_label.config(text="* 우리스포츠 방식 점수 계산\n   - 우리스포츠는 항목평점 및 평점을 계산할 때 소수점 4자리에서 반올림 합니다.\n * 동점 처리\n   - 1) 표현력 > 2) 정확성 > 3) 총점")
         else: # 태권소프트
             self.calculate_button.config(text="태권소프트 방식 점수 계산")
             self.description_label.config(text="* 태권소프트 방식 점수 계산\n   - 태권소프트는 항목평점 및 평점 계산 할 때 아래 식에 따릅니다.\n   - 각 품새 평점 : 소수점 3자리에서 반올림.\n   - 총 평점 : 소수점 4자리에서 반올림.\n   - 총점 : 소수점 3자리에서 반올림.  \n * 동점 처리 \n   - 1) 표현력 > 2) 정확성 > 3) 총점")
@@ -393,14 +388,14 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         if cheong_divisor > 0: # Check for division by zero
             cheong_combined_expression_avg /= cheong_divisor
             cheong_combined_accuracy_avg /= cheong_divisor
-            cheong_combined_unweighted_total_score /= cheong_divisor
+            # cheong_combined_unweighted_total_score는 합계이므로 나누지 않음
             cheong_combined_final_score /= cheong_divisor
 
         hong_divisor = valid_poomsae_counts["hong"]
         if hong_divisor > 0: # Check for division by zero
             hong_combined_expression_avg /= hong_divisor
             hong_combined_accuracy_avg /= hong_divisor
-            hong_combined_unweighted_total_score /= hong_divisor
+            # hong_combined_unweighted_total_score는 합계이므로 나누지 않음
             hong_combined_final_score /= hong_divisor
 
         # Display combined scores for Cheong
@@ -410,7 +405,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         score_system = self.score_system_var.get()
         if score_system == "우리스포츠":
             self.combined_score_displays["cheong"]["combined_total_score"].config(text=self._format_number_display(cheong_combined_unweighted_total_score, 1))
-            self.combined_score_displays["cheong"]["combined_overall_score"].config(text=self._format_number_display(self._truncate_float_value(cheong_combined_final_score, 3), 3))
+            self.combined_score_displays["cheong"]["combined_overall_score"].config(text=self._format_number_display(self._round_half_up_value(cheong_combined_final_score, 4), 3))
         else: # 태권소프트
             self.combined_score_displays["cheong"]["combined_total_score"].config(text=self._format_number_display(self._round_half_up_value(cheong_combined_unweighted_total_score, 2), 2))
             self.combined_score_displays["cheong"]["combined_overall_score"].config(text=self._format_number_display(self._round_half_up_value(cheong_combined_final_score, 3), 3))
@@ -421,14 +416,14 @@ class PoomsaeSochungCalculator(tk.Toplevel):
 
         if score_system == "우리스포츠":
             self.combined_score_displays["hong"]["combined_total_score"].config(text=self._format_number_display(hong_combined_unweighted_total_score, 1))
-            self.combined_score_displays["hong"]["combined_overall_score"].config(text=self._format_number_display(self._truncate_float_value(hong_combined_final_score, 3), 3))
+            self.combined_score_displays["hong"]["combined_overall_score"].config(text=self._format_number_display(self._round_half_up_value(hong_combined_final_score, 4), 3))
         else: # 태권소프트
             self.combined_score_displays["hong"]["combined_total_score"].config(text=self._format_number_display(self._round_half_up_value(hong_combined_unweighted_total_score, 2), 2))
-            self.combined_score_displays["hong"]["combined_overall_score"].config(text=self._format_number_display(self._round_half_up_value(hong_combined_final_score, 3), 3))
+            self.combined_score_displays["hong"]["combined_overall_score"].config(text=self._format_number_display(self._round_half_up_value(hong_combined_final_score, 4), 3))
 
         # Determine Win/Loss based on the final calculated score with tie-breaking rules
-        final_cheong_score = self._truncate_float_value(cheong_combined_final_score, 3)
-        final_hong_score = self._truncate_float_value(hong_combined_final_score, 3)
+        final_cheong_score = self._round_half_up_value(cheong_combined_final_score, 4)
+        final_hong_score = self._round_half_up_value(hong_combined_final_score, 4)
 
         if final_cheong_score > final_hong_score:
             self.win_loss_label.config(text="승패: 청 선수 승!", foreground="navy")
@@ -503,7 +498,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
 
             if judge_scores:
                 if score_system == "우리스포츠":
-                    avg_score = self._truncate_float_value(sum(judge_scores) / Decimal(str(len(judge_scores))), 3)
+                    avg_score = self._round_half_up_value(sum(judge_scores) / Decimal(str(len(judge_scores))), 4)
                 else: # 태권소프트
                     avg_score = self._round_half_up_value(sum(judge_scores) / Decimal(str(len(judge_scores))), 2)
             else:
@@ -527,7 +522,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         expression_overall_avg = Decimal('0.0')
         if expression_item_averages:
             if score_system == "우리스포츠":
-                expression_overall_avg = self._truncate_float_value(sum_of_expression_item_averages / Decimal(str(len(expression_item_averages))), 3)
+                expression_overall_avg = self._round_half_up_value(sum_of_expression_item_averages / Decimal(str(len(expression_item_averages))), 4)
             else: # 태권소프트
                 expression_overall_avg = self._round_half_up_value(sum_of_expression_item_averages / Decimal(str(len(expression_item_averages))), 2)
         
@@ -554,12 +549,12 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         # Update accuracy average display
         accuracy_avg_display = self.score_entries[poomsae_key][competitor_key].get("accuracy_avg_display")
         if accuracy_avg_display:
-            accuracy_avg_display.config(text=self._format_number_display(results["accuracy_avg"], 2 if score_system == "태권소프트" else 3))
+            accuracy_avg_display.config(text=self._format_number_display(results["accuracy_avg"], 3))
 
         # Update overall expression average display
         expression_overall_avg_display = self.score_entries[poomsae_key][competitor_key].get("expression_overall_avg_display")
         if expression_overall_avg_display:
-            expression_overall_avg_display.config(text=f"표현성 합계: {self._format_number_display(results['expression_overall_avg'], 3)}")
+            expression_overall_avg_display.config(text=f"표현성 합계: {self._format_number_display(results['expression_overall_avg'], 2 if score_system == "태권소프트" else 3)}")
 
         # Update unweighted total score display
         unweighted_total_score_display = self.score_entries[poomsae_key][competitor_key].get("unweighted_total_score_display")
@@ -573,7 +568,7 @@ class PoomsaeSochungCalculator(tk.Toplevel):
         weighted_overall_score_display = self.score_entries[poomsae_key][competitor_key].get("weighted_overall_score_display")
         if weighted_overall_score_display:
             if score_system == "우리스포츠":
-                weighted_overall_score_display.config(text=self._format_number_display(self._truncate_float_value(results["sum_of_item_averages"], 3), 3))
+                weighted_overall_score_display.config(text=self._format_number_display(self._round_half_up_value(results["sum_of_item_averages"], 4), 3))
             else: # 태권소프트
                 weighted_overall_score_display.config(text=self._format_number_display(self._round_half_up_value(results["sum_of_item_averages"], 2), 2))
 

@@ -19,8 +19,13 @@ class KyorugiTab(ttk.Frame):
         self.color_palette = ["#ADD8E6", "#90EE90", "#FFFFE0", "#FFDAB9", "#E6E6FA", "#B0E0E6", "#FFE4E1", "#D8BFD8", "#F5DEB3", "#C0C0C0"]
         self.color_index = 0
         self.text_color_map = {}
+        self.canvas = None
         self.create_widgets()
         self.populate_default_rows()
+
+    def _on_mousewheel(self, event):
+        if self.canvas:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _generate_round_options(self, headcount):
         options = []
@@ -103,6 +108,10 @@ class KyorugiTab(ttk.Frame):
         self.canvas.configure(yscrollcommand=scrollbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+        # Bind mouse wheel event to the canvas and its children
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
         self.populate_default_rows()
 
         results_labelframe = tk.LabelFrame(right_frame, text="결과")

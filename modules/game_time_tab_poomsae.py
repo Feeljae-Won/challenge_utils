@@ -22,13 +22,48 @@ DEFAULT_SETTINGS = {
     }
 }
 
+class Tooltip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+        self.widget.bind("<Button-1>", self.show_tooltip)
+
+    def show_tooltip(self, event):
+        if self.tooltip_window:
+            self.hide_tooltip(event)
+            return
+
+        x = self.widget.winfo_rootx() + self.widget.winfo_width()
+        y = self.widget.winfo_rooty()
+
+        self.tooltip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+
+        label = tk.Label(tw, text=self.text, justify='left',
+                         background="#ffffe0", relief='solid', borderwidth=1,
+                         font=("tahoma", "8", "normal"), wraplength=400)
+        label.pack(ipadx=5, ipady=5)
+        tw.bind("<Leave>", self.hide_tooltip)
+
+    def hide_tooltip(self, event):
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+        self.tooltip_window = None
+
 class PoomsaeTab(ttk.Frame):
     def __init__(self, notebook, parent_app):
         super().__init__(notebook)
         self.parent_app = parent_app # Reference to the main GameTimeCalculator app
         self.input_rows = []
-        self.rows_container = None # Initialize rows_container
+        self.rows_container = None
+        self.canvas = None
         self.create_widgets()
+
+    def _on_mousewheel(self, event):
+        if self.canvas:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def create_widgets(self):
         main_paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
@@ -89,22 +124,39 @@ class PoomsaeTab(ttk.Frame):
         self.header_check_var = tk.IntVar()
         header_check = tk.Checkbutton(header_frame, variable=self.header_check_var, command=self.toggle_all_checks)
         header_check.pack(side="left", padx=2, anchor='w')
-        tk.Label(header_frame, text="종목", width=18, anchor='w').pack(side="left", padx=2)
-        tk.Label(header_frame, text="참가부", width=18, anchor='w').pack(side="left", padx=2)
+
+        event_label_frame = tk.Frame(header_frame)
+        event_label_frame.pack(side="left", padx=2)
+        tk.Label(event_label_frame, text="종목", width=13, anchor='w').pack(side="left")
+        event_tooltip_icon = tk.Label(event_label_frame, text="❓", font=("Helvetica", 9), cursor="hand2")
+        event_tooltip_icon.pack(side="left", padx=(10, 0))
+        Tooltip(event_tooltip_icon, text="품새는 아래 양식에 맞춰서 입력해야 합니다.\n\n * 공인품새\n     - 개인전\n     - 복식전\n     - 단체전\n\n* 자유품새\n     - 개인전(자유품새)\n     - 복식전(자유품새)\n     - 단체전(자유품새)\n\n 위 형식에 맞춰서 입력하지 않으면 오류가 날 수 있습니다.")
+
+        division_label_frame = tk.Frame(header_frame)
+        division_label_frame.pack(side="left", padx=2)
+        tk.Label(division_label_frame, text="참가부", width=13, anchor='w').pack(side="left")
+        division_tooltip_icon = tk.Label(division_label_frame, text="❓", font=("Helvetica", 9), cursor="hand2")
+        division_tooltip_icon.pack(side="left", padx=(10, 0))
+        Tooltip(division_tooltip_icon, text="참가부는 아래 형식에 맞춰서 입력해야 합니다.\n\n     - 초등부\n     - 중등부\n     - 고등부\n     - 대학부\n      - 일반부\n\n 위 형식과 다르면 오류가 날 수 있습니다.")
+
         tk.Label(header_frame, text="세부부별", width=15, anchor='w').pack(side="left", padx=2)
         tk.Label(header_frame, text="성별", width=10, anchor='w').pack(side="left", padx=2)
         tk.Label(header_frame, text="인원수", width=15, anchor='w').pack(side="left", padx=2)
 
         
-        canvas = tk.Canvas(input_grid_frame)
-        scrollbar = tk.Scrollbar(input_grid_frame, orient="vertical", command=canvas.yview)
-        canvas.pack(side="left", fill="both", expand=True)
+        self.canvas = tk.Canvas(input_grid_frame)
+        scrollbar = tk.Scrollbar(input_grid_frame, orient="vertical", command=self.canvas.yview)
+        self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        self.rows_container = tk.Frame(canvas)
-        self.rows_container.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self.rows_container, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        self.rows_container = tk.Frame(self.canvas)
+        self.rows_container.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.create_window((0, 0), window=self.rows_container, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Bind mouse wheel event to the canvas and its children
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
         self.populate_default_rows()
 
         results_labelframe = tk.LabelFrame(right_frame, text="결과")

@@ -215,9 +215,7 @@ class GameNumberCalculator(tk.Toplevel):
             entries[label_text] = entry
         
         # '-' 버튼 추가
-        remove_button_font = font.Font(family="Helvetica", size=12, weight="bold")
-        remove_button = tk.Button(row_frame, text="-", bg="red", fg="white", font=remove_button_font,
-                                  command=lambda r_frame=row_frame: self.remove_row(r_frame))
+        remove_button = tk.Button(row_frame, text="-", command=lambda r_frame=row_frame: self.remove_row(r_frame))
         remove_button.pack(side=tk.LEFT, padx=5)
 
         self.rows.append({"frame": row_frame, "entries": entries, "number_label": number_label, "remove_button": remove_button})
@@ -547,9 +545,7 @@ class GameNumberCalculator(tk.Toplevel):
             entries[label_text] = entry
 
         # '-' 버튼 추가
-        remove_button_font = font.Font(family="Helvetica", size=12, weight="bold")
-        remove_button = tk.Button(row_frame, text="-", bg="red", fg="white", font=remove_button_font,
-                                  command=lambda r_frame=row_frame: self.remove_row(r_frame))
+        remove_button = tk.Button(row_frame, text="-", command=lambda r_frame=row_frame: self.remove_row(r_frame))
         remove_button.pack(side=tk.LEFT, padx=5)
 
         self.rows.append({"frame": row_frame, "entries": entries, "number_label": number_label, "remove_button": remove_button})
