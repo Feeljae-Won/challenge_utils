@@ -9,6 +9,115 @@ from common.version import __build_date__ as app_date
 from common.constants import GAME_NUMBER_TEMPLATE_PATH
 from utils.file_operations import download_template_file
 
+class SortOptionsWindow(tk.Toplevel):
+    def __init__(self, master, data):
+        super().__init__(master)
+        self.title("정렬 순서 변경")
+        self.geometry("550x600")
+        self.transient(master)
+        self.grab_set()
+
+        self.original_data = data
+        self.result = None  # 최종 결과를 담을 변수
+
+        # 상단 컨트롤 프레임
+        top_controls_frame = tk.Frame(self)
+        top_controls_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        # 버튼들을 담을 왼쪽 프레임
+        left_button_frame = tk.Frame(top_controls_frame)
+        left_button_frame.pack(side=tk.LEFT)
+
+        move_up_button = tk.Button(left_button_frame, text="▲ 위로 이동", command=self._move_up)
+        move_up_button.pack(side=tk.LEFT, padx=(0, 5))
+
+        move_down_button = tk.Button(left_button_frame, text="▼ 아래로 이동", command=self._move_down)
+        move_down_button.pack(side=tk.LEFT)
+
+        # 체크박스를 담을 오른쪽 프레임
+        right_check_frame = tk.Frame(top_controls_frame)
+        right_check_frame.pack(side=tk.RIGHT)
+
+        self.sort_by_schedule_var = tk.BooleanVar(value=False)
+        sort_by_schedule_check = tk.Checkbutton(right_check_frame, text="일정안 순 정렬", variable=self.sort_by_schedule_var)
+        sort_by_schedule_check.pack()
+
+        # Treeview (데이터 표시)
+        tree_frame = tk.Frame(self)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10)
+
+        self.tree = ttk.Treeview(tree_frame, columns=("순서", "종목", "부", "체급"), show="headings", selectmode='extended')
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        tree_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        tree_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.configure(yscrollcommand=tree_scrollbar.set)
+
+        self.tree.heading("순서", text="순서")
+        self.tree.column("순서", width=50, anchor='center')
+        self.tree.heading("종목", text="종목")
+        self.tree.column("종목", width=150)
+        self.tree.heading("부", text="부")
+        self.tree.column("부", width=100)
+        self.tree.heading("체급", text="체급")
+        self.tree.column("체급", width=100)
+
+        self.item_map = {} # Treeview item ID와 원본 데이터를 매핑
+        self._populate_tree()
+
+        # 하단 버튼 프레임
+        bottom_button_frame = tk.Frame(self)
+        bottom_button_frame.pack(pady=10)
+
+        save_button = tk.Button(bottom_button_frame, text="저장", command=self._save_and_close)
+        save_button.pack(side=tk.LEFT, padx=10)
+
+        cancel_button = tk.Button(bottom_button_frame, text="취소", command=self._cancel)
+        cancel_button.pack(side=tk.LEFT, padx=10)
+
+    def _populate_tree(self):
+        for i, data_row in enumerate(self.original_data):
+            values = (i + 1, data_row['종목'], data_row['부'], data_row['체급'])
+            item_id = self.tree.insert("", "end", values=values)
+            self.item_map[item_id] = data_row
+
+    def _move_up(self):
+        selected_items = self.tree.selection()
+        if not selected_items:
+            return
+        sorted_selection = sorted(selected_items, key=lambda x: self.tree.index(x))
+        for item_id in sorted_selection:
+            current_index = self.tree.index(item_id)
+            if current_index > 0:
+                self.tree.move(item_id, "", current_index - 1)
+
+    def _move_down(self):
+        selected_items = self.tree.selection()
+        if not selected_items:
+            return
+        sorted_selection = sorted(selected_items, key=lambda x: self.tree.index(x), reverse=True)
+        total_items = len(self.tree.get_children())
+        for item_id in sorted_selection:
+            current_index = self.tree.index(item_id)
+            if current_index < total_items - 1:
+                self.tree.move(item_id, "", current_index + 1)
+
+    def _save_and_close(self):
+        new_order_list = []
+        for item_id in self.tree.get_children():
+            new_order_list.append(self.item_map[item_id])
+        
+        self.result = {
+            "order": new_order_list,
+            "sort_by_schedule": self.sort_by_schedule_var.get()
+        }
+        self.destroy()
+
+    def _cancel(self):
+        self.result = None
+        self.destroy()
+
+
 class GameNumberCalculator(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
@@ -16,7 +125,7 @@ class GameNumberCalculator(tk.Toplevel):
         self.title(f"경기번호 계산기 v{app_version} (빌드: {app_date})")
         self.geometry("1200x700")
         self.last_imported_filename = ""
-        self.last_imported_filename = ""
+        self.sort_by_schedule = False # 일정안 순 정렬 옵션
 
         # 설명 레이블
         description_font = font.Font(family="Helvetica", size=12)
@@ -92,8 +201,23 @@ class GameNumberCalculator(tk.Toplevel):
         result_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         result_frame.pack_propagate(False) #결과 프레임 크기 고정
 
-        result_label = tk.Label(result_frame, text="계산 결과")
-        result_label.pack(pady=5)
+        result_header_frame = tk.Frame(result_frame)
+        result_header_frame.pack(fill=tk.X)
+
+        result_label = tk.Label(result_header_frame, text="계산 결과")
+        result_label.pack(side=tk.LEFT, pady=5, padx=5)
+
+        result_move_buttons_frame = tk.Frame(result_header_frame)
+        result_move_buttons_frame.pack(side=tk.LEFT, padx=10)
+
+        move_up_button = tk.Button(result_move_buttons_frame, text="▲", command=self._move_result_up)
+        move_up_button.pack(side=tk.LEFT, padx=2)
+
+        move_down_button = tk.Button(result_move_buttons_frame, text="▼", command=self._move_result_down)
+        move_down_button.pack(side=tk.LEFT, padx=2)
+
+        sort_options_button = tk.Button(result_header_frame, text="⚙️ 정렬옵션", command=self._open_sort_options)
+        sort_options_button.pack(side=tk.RIGHT, pady=5, padx=5)
 
         # 결과 표시 Treeview
         tree_frame = tk.Frame(result_frame) # Treeview와 스크롤바를 담을 프레임
@@ -155,6 +279,60 @@ class GameNumberCalculator(tk.Toplevel):
         self.main_frame.bind("<MouseWheel>", self._on_mousewheel) # Windows/Linux
         self.main_frame.bind("<Button-4>", self._on_mousewheel) # macOS scroll up
         self.main_frame.bind("<Button-5>", self._on_mousewheel) # macOS scroll down
+
+    def _open_sort_options(self):
+        # 1. 현재 입력된 데이터 가져오기
+        current_data = []
+        for row_data in self.rows:
+            entries = row_data["entries"]
+            event = entries["종목"].get().strip()
+            division = entries["부"].get().strip()
+            weight_class = entries["체급"].get().strip()
+            participants = entries["참가인원"].get().strip()
+
+            # 참가인원이 있는 행만 정렬 대상으로 포함
+            if participants:
+                current_data.append({
+                    "종목": event,
+                    "부": division,
+                    "체급": weight_class,
+                    "참가인원": participants,
+                    "original_row_data": row_data # 원래 위젯 참조를 저장
+                })
+
+        if not current_data:
+            tk.messagebox.showinfo("정보", "정렬할 데이터가 없습니다.")
+            return
+
+        # 2. 정렬 옵션 창 열기
+        sort_window = SortOptionsWindow(self, current_data)
+        self.wait_window(sort_window) # 창이 닫힐 때까지 대기
+
+        # 3. 변경된 순서와 옵션 적용
+        if sort_window.result:
+            self.sort_by_schedule = sort_window.result["sort_by_schedule"]
+            if sort_window.result["order"]:
+                self._apply_new_order(sort_window.result["order"])
+
+    def _apply_new_order(self, new_order):
+        # 새로운 순서에 맞게 기존 입력 필드의 값을 업데이트합니다.
+        # new_order 리스트의 순서대로 self.rows의 해당 위젯에 값을 재설정합니다.
+
+        # 비어있지 않은 행들만 가져옵니다.
+        active_rows = [row for row in self.rows if row["entries"]["참가인원"].get().strip()]
+
+        # new_order의 순서대로 active_rows의 위젯에 값을 채워넣습니다.
+        for i, sorted_data in enumerate(new_order):
+            if i < len(active_rows):
+                target_row_widgets = active_rows[i]["entries"]
+                target_row_widgets["종목"].delete(0, tk.END)
+                target_row_widgets["종목"].insert(0, sorted_data["종목"])
+                target_row_widgets["부"].delete(0, tk.END)
+                target_row_widgets["부"].insert(0, sorted_data["부"])
+                target_row_widgets["체급"].delete(0, tk.END)
+                target_row_widgets["체급"].insert(0, sorted_data["체급"])
+                target_row_widgets["참가인원"].delete(0, tk.END)
+                target_row_widgets["참가인원"].insert(0, sorted_data["참가인원"])
 
     def _on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
@@ -376,6 +554,10 @@ class GameNumberCalculator(tk.Toplevel):
             except ValueError:
                 continue
 
+        # "일정안 순 정렬" 옵션이 켜져 있으면 특별 정렬 수행
+        if self.sort_by_schedule:
+            self._sort_results_by_schedule()
+
     def _calculate_standard_matches(self, participants, event, division, weight_class, game_number_counter, row_index):
         total_slots = 1
         while total_slots < participants:
@@ -390,7 +572,13 @@ class GameNumberCalculator(tk.Toplevel):
             num_matches = first_round_matches // 2
             start_game = game_number_counter
             end_game = game_number_counter + num_matches - 1
-            game_numbers_display = f"{start_game}~{end_game}" if num_matches > 0 else "-"
+            if num_matches > 0:
+                if start_game == end_game:
+                    game_numbers_display = f"{start_game}"
+                else:
+                    game_numbers_display = f"{start_game}~{end_game}"
+            else:
+                game_numbers_display = "-"
             self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, num_matches))
             game_number_counter = end_game + 1
             row_index += 1
@@ -407,7 +595,13 @@ class GameNumberCalculator(tk.Toplevel):
 
             start_game = game_number_counter
             end_game = game_number_counter + round_matches - 1
-            game_numbers_display = f"{start_game}~{end_game}" if round_matches > 0 else "-"
+            if round_matches > 0:
+                if start_game == end_game:
+                    game_numbers_display = f"{start_game}"
+                else:
+                    game_numbers_display = f"{start_game}~{end_game}"
+            else:
+                game_numbers_display = "-"
             self.result_tree.insert("", "end", values=(row_index, event, division, weight_class, round_name, game_numbers_display, round_matches))
             game_number_counter = end_game + 1
             current_participants //= 2
@@ -497,6 +691,46 @@ class GameNumberCalculator(tk.Toplevel):
             # Fallback for any other string that doesn't fit the patterns above
             return (4, round_str)
 
+    def _sort_results_by_schedule(self):
+        all_items = self.result_tree.get_children("")
+        if not all_items:
+            return
+
+        # 데이터와 정렬 키를 함께 저장
+        data_to_sort = []
+        for item in all_items:
+            values = self.result_tree.item(item, 'values')
+            kangsoo = self._get_kangsoo_value(values[4]) # 강수
+            game_number_str = str(values[5]) # 경기번호
+            
+            # 해당 강수에서 새로 시작하는 경기인지 (경기번호가 1로 시작)
+            is_new_start = game_number_str.startswith('1') or game_number_str.startswith('1~')
+
+            # 정렬 기준: 1. 강수(내림차순), 2. 새로운 시작 여부(True가 먼저), 3. 원래 순서(번호 오름차순)
+            sort_key = (-kangsoo, not is_new_start, int(values[0]))
+            data_to_sort.append((sort_key, values))
+
+        # 정렬 실행
+        data_to_sort.sort(key=lambda x: x[0])
+
+        # Treeview 비우기
+        for item in all_items:
+            self.result_tree.delete(item)
+
+        # 정렬된 데이터로 Treeview 다시 채우기
+        for i, (key, values) in enumerate(data_to_sort):
+            new_values = list(values)
+            new_values[0] = i + 1 # 번호 재지정
+            self.result_tree.insert("", "end", values=new_values)
+
+    def _get_kangsoo_value(self, kangsoo_str):
+        try:
+            # "128강", "64" 등 숫자 부분만 추출하여 정수로 변환
+            return int("".join(filter(str.isdigit, str(kangsoo_str))))
+        except:
+            # 변환 실패 시 낮은 우선순위 부여
+            return 0
+
     def export_results_to_excel(self):
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         default_filename = f"경기번호계산_{current_time}.xlsx"
@@ -525,6 +759,43 @@ class GameNumberCalculator(tk.Toplevel):
             tk.messagebox.showinfo("성공", f"결과가 {file_path}에 저장되었습니다.")
         except Exception as e:
             tk.messagebox.showerror("오류", f"파일 저장 중 오류가 발생했습니다: {e}")
+
+    def _move_result_up(self):
+        selected_items = self.result_tree.selection()
+        if not selected_items:
+            return
+
+        sorted_selection = sorted(selected_items, key=lambda x: self.result_tree.index(x))
+
+        for item_id in sorted_selection:
+            current_index = self.result_tree.index(item_id)
+            if current_index > 0:
+                self.result_tree.move(item_id, "", current_index - 1)
+        
+        self._resequence_result_numbers()
+
+    def _move_result_down(self):
+        selected_items = self.result_tree.selection()
+        if not selected_items:
+            return
+
+        sorted_selection = sorted(selected_items, key=lambda x: self.result_tree.index(x), reverse=True)
+
+        total_items = len(self.result_tree.get_children())
+        for item_id in sorted_selection:
+            current_index = self.result_tree.index(item_id)
+            if current_index < total_items - 1:
+                self.result_tree.move(item_id, "", current_index + 1)
+
+        self._resequence_result_numbers()
+
+    def _resequence_result_numbers(self):
+        all_items = self.result_tree.get_children()
+        for i, item_id in enumerate(all_items):
+            current_values = self.result_tree.item(item_id, 'values')
+            new_values = list(current_values)
+            new_values[0] = i + 1
+            self.result_tree.item(item_id, values=new_values)
 
     def add_row_with_data(self, data):
         row_frame = tk.Frame(self.main_frame)

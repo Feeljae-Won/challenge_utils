@@ -103,7 +103,7 @@ class MainApp(tk.Tk):
         text_area.pack(expand=True, fill="both")
 
         try:
-            with open("RELEASE_NOTES.md", "r", encoding="utf-8") as f:
+            with open("./RELEASE_NOTES.md", "r", encoding="utf-8") as f:
                 release_notes_content = f.read()
             text_area.insert("1.0", release_notes_content)
         except FileNotFoundError:
