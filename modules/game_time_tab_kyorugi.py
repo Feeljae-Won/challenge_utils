@@ -493,7 +493,7 @@ class KyorugiTab(ttk.Frame):
         file_path = filedialog.askopenfilename(
             parent=self,
             title="엑셀 파일 선택",
-            filetypes=[("Excel files", "*.xlsx")]
+            filetypes=[("Excel files", "*.xls*"), ("All files", "*.*")]
         )
         if not file_path:
             return
@@ -506,13 +506,14 @@ class KyorugiTab(ttk.Frame):
                 self.input_rows[i]['frame'].destroy()
                 self.input_rows.pop(i)
 
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                if all(cell is None or str(cell).strip() == "" for cell in row):
+            for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True)):
+                processed_row = ["" if cell is None else cell for cell in row]
+
+                if all(str(cell).strip() == "" for cell in processed_row):
                     continue
-                data = {"참가부": row[0], "체급": row[1], "인원수": row[2]}
-                # Assuming Excel might have '시작강수' and '종료강수' columns
-                if len(row) > 3: data["시작강수"] = row[3]
-                if len(row) > 4: data["종료강수"] = row[4]
+                data = {"참가부": processed_row[0], "체급": processed_row[1], "인원수": processed_row[2]}
+                if len(processed_row) > 3: data["시작강수"] = processed_row[3]
+                if len(processed_row) > 4: data["종료강수"] = processed_row[4]
                 self.add_input_row(data)
             
             if not self.input_rows: 

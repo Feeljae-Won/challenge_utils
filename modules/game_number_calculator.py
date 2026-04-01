@@ -399,7 +399,7 @@ class GameNumberCalculator(tk.Toplevel):
         self.rows.append({"frame": row_frame, "entries": entries, "number_label": number_label, "remove_button": remove_button})
 
     def import_from_excel(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls *"), ("All files", "*.*")])
         if not file_path:
             return
 
@@ -812,7 +812,9 @@ class GameNumberCalculator(tk.Toplevel):
             entry = tk.Entry(row_frame, width=15)
             entry.pack(side=tk.LEFT, padx=5)
             if i < len(data):
-                entry.insert(0, data[i])
+                # Convert None to empty string
+                value = "" if data[i] is None else data[i]
+                entry.insert(0, value)
             entries[label_text] = entry
 
         # '-' 버튼 추가

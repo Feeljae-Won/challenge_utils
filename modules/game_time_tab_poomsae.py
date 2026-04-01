@@ -237,167 +237,136 @@ class PoomsaeTab(ttk.Frame):
         rows_to_process = selected_rows if selected_rows else self.input_rows
 
         total_seconds_gongin_raw = 0
-        total_seconds_jayu_raw = 0
+        total_seconds_jayu_prelim_main_raw = 0
+        total_seconds_jayu_final_raw = 0
 
         sub_totals = {
             "공인품새": {"개인전": {"time": 0, "games": 0}, "복식전": {"time": 0, "games": 0}, "단체전": {"time": 0, "games": 0}},
-            "자유품새": {"개인전": {"time": 0, "games": 0}, "복식전": {"time": 0, "games": 0}, "단체전": {"time": 0, "games": 0}}
+            "자유품새": {"개인전": {"time": 0, "games": 0}, "복식전": {"time": 0, "games": 0}, "단체전": {"time": 0, "games": 0}},
+            "자유품새_결선": {"time": 0, "games": 0}
         }
 
         for row in rows_to_process:
             try:
-                event_input = row['event'].get() # e.g., "개인전", "개인전(자유품새)"
-                division_input = row['division'].get() # e.g., "초등부", "일반부"
+                event_input = row['event'].get()
+                division_input = row['division'].get()
                 category = row['class'].get()
                 gender = row['gender'].get()
                 original_headcount = int(row['count'].get() or 0)
-                calculated_headcount = original_headcount # Initialize with original headcount
 
-                # Determine the actual event type (공인품새 or 자유품새) for calculation and sub_totals key
                 actual_event_type = "공인품새"
                 if "자유품새" in event_input:
                     actual_event_type = "자유품새"
 
-                # Determine the actual division type (개인전, 복식전, 단체전) from event_input
                 actual_division_type = event_input.replace("(자유품새)", "").strip()
 
-                # Validate division_input (참가부) against expected categories
                 valid_categories = ["초등부", "중등부", "고등부", "대학부", "일반부"]
                 if division_input not in valid_categories:
                     messagebox.showerror("데이터 오류", f"참가부 입력이 잘못되었습니다. {', '.join(valid_categories)} 중 하나여야 합니다.\n잘못된 값: {division_input}", parent=self)
-                    return # Stop calculation if invalid data is found
-
-                # Apply headcount adjustments based on actual_event_type and actual_division_type
-                if actual_event_type == "공인품새":
-                    if actual_division_type == "개인전":
-                        calculated_headcount = original_headcount - 1
-                    elif actual_division_type == "복식전":
-                        calculated_headcount = (original_headcount / 2) - 1
-                    elif actual_division_type == "단체전":
-                        calculated_headcount = (original_headcount / 3) - 1
-                else: # 자유품새
-                    if actual_division_type == "개인전":
-                        if original_headcount > 22:
-                            participants = original_headcount
-                            num_prelim_groups = 2
-                            while participants / num_prelim_groups > 11.5 and num_prelim_groups % 2 == 0:
-                                num_prelim_groups += 2
-
-                            if num_prelim_groups < 2:
-                                num_prelim_groups = 2
-                            if num_prelim_groups % 2 != 0:
-                                num_prelim_groups += 1
-
-                            base_prelim_group_size = participants // num_prelim_groups
-                            remainder_prelim = participants % num_prelim_groups
-
-                            prelim_group_sizes = []
-                            for g in range(num_prelim_groups):
-                                size = base_prelim_group_size
-                                if g < remainder_prelim:
-                                    size += 1
-                                prelim_group_sizes.append(size)
-
-                            # Calculate advancement to main round based on first group size
-                            first_group_size = prelim_group_sizes[0] if prelim_group_sizes else 0
-                            advancement_per_group = (first_group_size + 1) // 2 # Round up
-                            total_main_round_participants_for_next_stage = advancement_per_group * num_prelim_groups
-
-                            # Now, calculate main round groups based on total_main_round_participants_for_next_stage
-                            num_main_groups = 2
-                            while total_main_round_participants_for_next_stage / num_main_groups > 11.5 and num_main_groups % 2 == 0:
-                                num_main_groups += 2
-
-                            if num_main_groups < 2:
-                                num_main_groups = 2
-                            if num_main_groups % 2 != 0:
-                                num_main_groups += 1
-
-                            base_main_group_size = total_main_round_participants_for_next_stage // num_main_groups
-                            remainder_main = total_main_round_participants_for_next_stage % num_main_groups
-
-                            main_group_sizes = []
-                            for g in range(num_main_groups):
-                                size = base_main_group_size
-                                if g < remainder_main:
-                                    size += 1
-                                main_group_sizes.append(size)
-
-                            calculated_headcount = 0
-                            if self.prelim_var.get():
-                                calculated_headcount += sum(prelim_group_sizes)
-                            if self.main_var.get():
-                                calculated_headcount += sum(main_group_sizes)
-                            if self.final_var.get():
-                                calculated_headcount += 8 # 결선은 항상 8명
-
-                        elif 12 <= original_headcount <= 21:
-                            calculated_headcount = 0
-                            if self.main_var.get():
-                                calculated_headcount += original_headcount
-                            if self.final_var.get():
-                                calculated_headcount += 8 # 결선은 항상 8명
-                        # else: original_headcount <= 11, calculated_headcount remains original_headcount
-                        # If only final is checked for <= 11 participants, it should be 8
-                        if original_headcount <= 11 and self.final_var.get() and not self.prelim_var.get() and not self.main_var.get():
-                            calculated_headcount = 8
-                        elif original_headcount <= 11 and not self.final_var.get() and not self.prelim_var.get() and not self.main_var.get():
-                            calculated_headcount = 0 # If nothing is checked, and participants <= 11, then 0
-                        elif original_headcount <= 11 and self.final_var.get() and (self.prelim_var.get() or self.main_var.get()):
-                            calculated_headcount = original_headcount + 8 # If final is checked and other rounds are also checked, add 8 for final
-                        elif original_headcount <= 11 and (self.prelim_var.get() or self.main_var.get()):
-                            calculated_headcount = original_headcount # If only prelim/main are checked, use original headcount
-                    elif actual_division_type == "복식전":
-                        calculated_headcount = original_headcount / 2
-                    elif actual_division_type == "단체전":
-                        calculated_headcount = original_headcount / 5
+                    return
 
                 time_per_game = 0
                 if actual_event_type == "공인품새":
+                    calculated_headcount = 0
+                    if original_headcount > 1:
+                        if actual_division_type == "개인전":
+                            calculated_headcount = original_headcount - 1
+                        elif actual_division_type == "복식전":
+                            calculated_headcount = (original_headcount / 2) - 1
+                        elif actual_division_type == "단체전":
+                            calculated_headcount = (original_headcount / 3) - 1
+
                     if actual_division_type == "개인전":
-                        time_per_game = int(settings['individual'].get(division_input, 0)) # Use division_input as category
+                        time_per_game = int(settings['individual'].get(division_input, 0))
                     elif actual_division_type == "복식전" or actual_division_type == "단체전":
-                        time_per_game = int(settings['team'].get(division_input, 0)) # Use division_input as category
+                        time_per_game = int(settings['team'].get(division_input, 0))
+                    
+                    row_total_seconds = calculated_headcount * time_per_game
+                    total_seconds_gongin_raw += row_total_seconds
+                    sub_totals[actual_event_type][actual_division_type]["time"] += row_total_seconds
+                    sub_totals[actual_event_type][actual_division_type]["games"] += calculated_headcount
+                
                 else: # 자유품새
+                    prelim_main_headcount = 0
+                    final_headcount = 0
+
+                    num_competitors = 0
+                    if actual_division_type == "개인전":
+                        num_competitors = original_headcount
+                    elif actual_division_type == "복식전":
+                        num_competitors = original_headcount / 2
+                    elif actual_division_type == "단체전":
+                        num_competitors = original_headcount / 5
+
+                    if num_competitors > 22:
+                        participants = num_competitors
+                        num_prelim_groups = 2
+                        while participants / num_prelim_groups > 11.5 and num_prelim_groups % 2 == 0: num_prelim_groups += 2
+                        if num_prelim_groups < 2: num_prelim_groups = 2
+                        if num_prelim_groups % 2 != 0: num_prelim_groups += 1
+                        base_prelim_group_size = participants // num_prelim_groups
+                        remainder_prelim = participants % num_prelim_groups
+                        prelim_group_sizes = [base_prelim_group_size + 1 if g < remainder_prelim else base_prelim_group_size for g in range(num_prelim_groups)]
+                        
+                        first_group_size = prelim_group_sizes[0] if prelim_group_sizes else 0
+                        advancement_per_group = (first_group_size + 1) // 2
+                        total_main_round_participants = advancement_per_group * num_prelim_groups
+                        
+                        num_main_groups = 2
+                        while total_main_round_participants / num_main_groups > 11.5 and num_main_groups % 2 == 0: num_main_groups += 2
+                        if num_main_groups < 2: num_main_groups = 2
+                        if num_main_groups % 2 != 0: num_main_groups += 1
+                        base_main_group_size = total_main_round_participants // num_main_groups
+                        remainder_main = total_main_round_participants % num_main_groups
+                        main_group_sizes = [base_main_group_size + 1 if g < remainder_main else base_main_group_size for g in range(num_main_groups)]
+
+                        if self.prelim_var.get(): prelim_main_headcount += sum(prelim_group_sizes)
+                        if self.main_var.get(): prelim_main_headcount += sum(main_group_sizes)
+                        if self.final_var.get(): final_headcount += 8
+
+                    elif 12 <= num_competitors <= 21:
+                        if self.main_var.get(): prelim_main_headcount += num_competitors
+                        if self.final_var.get(): final_headcount += 8
+                    
+                    elif num_competitors > 0: # <= 11
+                        if self.final_var.get():
+                            final_headcount += num_competitors
+
                     freestyle_map = {"개인전": "개인", "복식전": "복식", "단체전": "단체"}
                     time_per_game = int(settings['freestyle'].get(freestyle_map.get(actual_division_type), 0))
-                
-                row_total_seconds = calculated_headcount * time_per_game
-                
-                # Accumulate raw total seconds for each poomsae type
-                if actual_event_type == "공인품새":
-                    total_seconds_gongin_raw += row_total_seconds
-                else:
-                    total_seconds_jayu_raw += row_total_seconds
-
-                # Accumulate raw sub-totals for each division
-                # Use actual_event_type for the first level key
-                sub_totals[actual_event_type][actual_division_type]["time"] += row_total_seconds
-                sub_totals[actual_event_type][actual_division_type]["games"] += calculated_headcount # Store calculated games
+                    
+                    row_seconds_prelim_main = prelim_main_headcount * time_per_game
+                    row_seconds_final = final_headcount * time_per_game
+                    
+                    total_seconds_jayu_prelim_main_raw += row_seconds_prelim_main
+                    total_seconds_jayu_final_raw += row_seconds_final
+                    
+                    sub_totals[actual_event_type][actual_division_type]["time"] += row_seconds_prelim_main
+                    sub_totals[actual_event_type][actual_division_type]["games"] += prelim_main_headcount
+                    sub_totals["자유품새_결선"]["time"] += row_seconds_final
+                    sub_totals["자유품새_결선"]["games"] += final_headcount
 
             except (ValueError, KeyError) as e:
                 messagebox.showerror("데이터 오류", f"입력 데이터에 오류가 있습니다. 확인해주세요.\n종목: {event_input}, 참가부: {division_input}, 세부부별: {category}, 성별: {gender}\n오류: {e}", parent=self)
                 return
 
-        # Calculate court-applied durations for each poomsae type
         gongin_duration_per_court = total_seconds_gongin_raw / gongin_courts if gongin_courts > 0 else 0
         
-        jayu_duration_per_court = total_seconds_jayu_raw
-        if self.freestyle_simultaneous_var.get() == 1: # If checkbox is checked, divide by court count
-            jayu_duration_per_court = total_seconds_jayu_raw / jayu_courts if jayu_courts > 0 else 0
+        jayu_prelim_main_duration_per_court = total_seconds_jayu_prelim_main_raw
+        if self.freestyle_simultaneous_var.get() == 1:
+            jayu_prelim_main_duration_per_court /= jayu_courts if jayu_courts > 0 else 1
 
-        # Total estimated time is the sum of court-applied times for each poomsae type
-        total_duration_seconds = gongin_duration_per_court + jayu_duration_per_court
+        jayu_final_duration = total_seconds_jayu_final_raw # 결선은 항상 1코트
+
+        total_duration_seconds = gongin_duration_per_court + jayu_prelim_main_duration_per_court + jayu_final_duration
         end_time = start_time + timedelta(seconds=total_duration_seconds)
 
-        # --- Display Results ---
         def format_time(seconds):
             m, s = divmod(seconds, 60)
             h, m = divmod(m, 60)
             return f"{int(h)}시간 {int(m)}분 {int(s)}초"
 
         def format_subtotal_with_games(seconds, games_count, court_divisor=1):
-            # Apply court division here for individual division times
             effective_seconds = seconds / court_divisor if court_divisor > 0 else 0
             return f"{format_time(effective_seconds)} (총 {int(games_count)} 게임)"
 
@@ -414,20 +383,19 @@ class PoomsaeTab(ttk.Frame):
         result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['개인전']['time'], sub_totals['공인품새']['개인전']['games'], gongin_courts)}\n"
         result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['복식전']['time'], sub_totals['공인품새']['복식전']['games'], gongin_courts)}\n"
         result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['공인품새']['단체전']['time'], sub_totals['공인품새']['단체전']['games'], gongin_courts)}\n\n"
-        total_gongin_games = sub_totals['공인품새']['개인전']['games'] + \
-                             sub_totals['공인품새']['복식전']['games'] + \
-                             sub_totals['공인품새']['단체전']['games']
+        total_gongin_games = sum(d['games'] for d in sub_totals['공인품새'].values())
         result_str += f"  공인품새 총 소요시간: {format_time(gongin_duration_per_court)} (총 {int(total_gongin_games)} 게임)\n"
 
         freestyle_simultaneous_status = "적용" if self.freestyle_simultaneous_var.get() == 1 else "미적용"
-        total_jayu_games = sub_totals['자유품새']['개인전']['games'] + \
-                           sub_totals['자유품새']['복식전']['games'] + \
-                           sub_totals['자유품새']['단체전']['games']
+        total_jayu_prelim_main_games = sum(d['games'] for d in sub_totals['자유품새'].values())
+        total_jayu_final_games = sub_totals['자유품새_결선']['games']
+        total_jayu_games = total_jayu_prelim_main_games + total_jayu_final_games
+        total_jayu_duration = jayu_prelim_main_duration_per_court + jayu_final_duration
+
         result_str += f"\n[자유품새] - {jayu_courts} 코트 기준 (동시진행 {freestyle_simultaneous_status})\n\n"
-        result_str += f"  개인전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['개인전']['time'], sub_totals['자유품새']['개인전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
-        result_str += f"  복식전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['복식전']['time'], sub_totals['자유품새']['복식전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n"
-        result_str += f"  단체전 소요시간: {format_subtotal_with_games(sub_totals['자유품새']['단체전']['time'], sub_totals['자유품새']['단체전']['games'], jayu_courts if self.freestyle_simultaneous_var.get() == 1 else 1)}\n\n"
-        result_str += f"  자유품새 총 소요시간: {format_time(jayu_duration_per_court)} (총 {int(total_jayu_games)} 게임)\n"
+        result_str += f"  예선/본선 소요시간: {format_time(jayu_prelim_main_duration_per_court)} (총 {int(total_jayu_prelim_main_games)} 게임)\n"
+        result_str += f"  결선 소요시간 (1코트 고정): {format_time(jayu_final_duration)} (총 {int(total_jayu_final_games)} 게임)\n\n"
+        result_str += f"  자유품새 총 소요시간: {format_time(total_jayu_duration)} (총 {int(total_jayu_games)} 게임)\n"
 
         result_str += "\n============================================================\n"
         
@@ -444,18 +412,14 @@ class PoomsaeTab(ttk.Frame):
         result_str += "         본선 - 결선을 계산\n"
         result_str += "       * 11명(팀) 이하일 경우 결선으로 계산\n"
         
-
         self.result_text.config(state="normal")
         self.result_text.delete("1.0", tk.END)
         self.result_text.insert(tk.END, result_str)
 
-        # Apply bold tags
-        self.result_text.tag_add("bold", "3.0", "3.end") # 총 예상 소요시간
-        self.result_text.tag_add("bold", "5.0", "5.end") # 시작 시간
-        self.result_text.tag_add("bold", "7.0", "7.end") # 예상 종료 시간
+        self.result_text.tag_add("bold", "3.0", "3.end")
+        self.result_text.tag_add("bold", "5.0", "5.end")
+        self.result_text.tag_add("bold", "7.0", "7.end")
 
-        # Find and bold "공인품새 총 소요시간" and "자유품새 총 소요시간"
-        # These lines might shift, so find them dynamically
         gongin_total_time_start = self.result_text.search("공인품새 총 소요시간", "1.0", tk.END)
         if gongin_total_time_start:
             gongin_total_time_end = self.result_text.search("\n", gongin_total_time_start, tk.END)
@@ -683,7 +647,7 @@ class PoomsaeTab(ttk.Frame):
         file_path = filedialog.askopenfilename(
             parent=self,
             title="엑셀 파일 선택",
-            filetypes=[("Excel files", "*.xlsx")]
+            filetypes=[("Excel files", "*.xls*"), ("All files", "*.*")]
         )
         if not file_path:
             return
@@ -696,10 +660,19 @@ class PoomsaeTab(ttk.Frame):
                 self.input_rows[i]['frame'].destroy()
                 self.input_rows.pop(i)
 
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                if all(cell is None or str(cell).strip() == "" for cell in row):
+            for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True)):
+                # Convert None to empty string for all cells
+                processed_row = ["" if cell is None else cell for cell in row]
+
+                if all(str(cell).strip() == "" for cell in processed_row):
                     continue
-                data = {"종목": row[0], "참가부": row[1], "세부부별": row[2], "성별": row[3], "인원수": row[4]}
+                data = {
+                    "종목": processed_row[0],
+                    "참가부": processed_row[1],
+                    "세부부별": processed_row[2],
+                    "성별": processed_row[3],
+                    "인원수": processed_row[4]
+                }
                 self.add_input_row(data)
             
             if not self.input_rows: 
